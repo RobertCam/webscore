@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AnalyzeRequest, AnalyzeResponse, Scorecard } from '@/types/scorecard';
-import { getAllCategoriesWithChecks, getCheckInfo } from '@/lib/analyze/checkInfo';
+import { getCheckInfo } from '@/lib/analyze/checkInfo';
 
 export default function Home() {
   const [url, setUrl] = useState('');
@@ -301,9 +301,9 @@ export default function Home() {
               <div className="flex justify-between items-start mb-6">
                     <h2 className="text-xl font-semibold text-gray-900">
                       {drawerContent === 'check' 
-                        ? (getCheckInfo(selectedCheck)?.name || selectedCheck)
+                        ? (getCheckInfo(selectedCheck || '')?.name || selectedCheck || 'Unknown Check')
                         : drawerContent === 'evidence'
-                        ? `Evidence: ${getCheckInfo(selectedCheck)?.name || selectedCheck}`
+                        ? `Evidence: ${getCheckInfo(selectedCheck || '')?.name || selectedCheck || 'Unknown Check'}`
                         : 'Scoring Rubric'
                       }
                     </h2>

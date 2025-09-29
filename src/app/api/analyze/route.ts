@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalyzeRequest, AnalyzeResponse, Scorecard } from '@/types/scorecard';
 import { fetchRaw, renderRemotely } from '@/lib/fetcher/fetchRaw';
-import { parseHTML, extractFacts } from '@/lib/parse/dom';
+import { parseHTML, extractFacts, ParsedHTML } from '@/lib/parse/dom';
 import { createCheckResult, computeCategoryScore, computeTotalScore } from '@/lib/analyze/rubric';
 
 export async function POST(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const facts = extractFacts(parsed);
     
     // Run all checks
-    const checkResults = await runAllChecks(rawData, parsed, facts);
+    const checkResults = await runAllChecks(rawData, parsed, facts as Record<string, unknown>);
     
     // Compute category scores
   const categoryResults = [
@@ -233,18 +233,18 @@ async function runAllChecks(
 
   // M2: Optimized Title
   if (parsed.title) {
-    const hasBrand = facts.brand && parsed.title.toLowerCase().includes(facts.brand.toLowerCase());
-    const hasLocality = facts.locality && parsed.title.toLowerCase().includes(facts.locality.toLowerCase());
+    const hasBrand = facts.brand && typeof facts.brand === 'string' && parsed.title.toLowerCase().includes(facts.brand.toLowerCase());
+    const hasLocality = facts.locality && typeof facts.locality === 'string' && parsed.title.toLowerCase().includes(facts.locality.toLowerCase());
     
     if (hasBrand && hasLocality) {
       results.push(createCheckResult('M2', 'pass', [
         'Title contains both brand and locality',
-        `Brand: ${facts.brand}, Locality: ${facts.locality}`
+        `Brand: ${facts.brand as string}, Locality: ${facts.locality as string}`
       ]));
     } else if (hasBrand || hasLocality) {
       results.push(createCheckResult('M2', 'partial', [
         `Title contains ${hasBrand ? 'brand' : 'locality'} but not both`,
-        `Brand: ${facts.brand || 'not found'}, Locality: ${facts.locality || 'not found'}`
+        `Brand: ${(facts.brand as string) || 'not found'}, Locality: ${(facts.locality as string) || 'not found'}`
       ]));
     } else {
       results.push(createCheckResult('M2', 'fail', [
@@ -269,18 +269,18 @@ async function runAllChecks(
 
   // M4: Meta description contains brand + locality
   if (parsed.description) {
-    const hasBrand = facts.brand && parsed.description.toLowerCase().includes(facts.brand.toLowerCase());
-    const hasLocality = facts.locality && parsed.description.toLowerCase().includes(facts.locality.toLowerCase());
+    const hasBrand = facts.brand && typeof facts.brand === 'string' && parsed.description.toLowerCase().includes(facts.brand.toLowerCase());
+    const hasLocality = facts.locality && typeof facts.locality === 'string' && parsed.description.toLowerCase().includes(facts.locality.toLowerCase());
     
     if (hasBrand && hasLocality) {
       results.push(createCheckResult('M4', 'pass', [
         'Description contains both brand and locality',
-        `Brand: ${facts.brand}, Locality: ${facts.locality}`
+        `Brand: ${facts.brand as string}, Locality: ${facts.locality as string}`
       ]));
     } else if (hasBrand || hasLocality) {
       results.push(createCheckResult('M4', 'partial', [
         `Description contains ${hasBrand ? 'brand' : 'locality'} but not both`,
-        `Brand: ${facts.brand || 'not found'}, Locality: ${facts.locality || 'not found'}`
+        `Brand: ${(facts.brand as string) || 'not found'}, Locality: ${(facts.locality as string) || 'not found'}`
       ]));
     } else {
       results.push(createCheckResult('M4', 'fail', [
@@ -462,7 +462,7 @@ async function runAllChecks(
   const escapedH1Tags = h1Tags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
   
   if (parsed.h1s.length === 1) {
-    const hasLocality = facts.locality && parsed.h1.toLowerCase().includes(facts.locality.toLowerCase());
+    const hasLocality = facts.locality && typeof facts.locality === 'string' && parsed.h1 && parsed.h1.toLowerCase().includes(facts.locality.toLowerCase());
     if (hasLocality) {
       results.push(createCheckResult('C1', 'pass', [
         `Single H1 found with locality: "${parsed.h1}"`,
@@ -485,7 +485,7 @@ async function runAllChecks(
 
   // C2: Heading Structure
   let headingScore = 0;
-  const maxHeadingScore = 5;
+  // const maxHeadingScore = 5;
   const headingIssues: string[] = [];
   
   // Check for logical hierarchy (no jumps)
@@ -574,7 +574,7 @@ async function runAllChecks(
     
     if (dateModified) {
       try {
-        const modifiedDate = new Date(dateModified);
+        const modifiedDate = new Date(dateModified as string);
         const now = new Date();
         const daysDiff = Math.floor((now.getTime() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24));
         
@@ -644,7 +644,7 @@ async function runAllChecks(
   const schemaName = allSchemaItems.find((item: Record<string, unknown>) => item.name)?.name;
   const brandSources = [parsed.title, parsed.h1, schemaName].filter(Boolean);
   const brandConsistency = brandSources.every(source => 
-    source && facts.brand && source.toLowerCase().includes(facts.brand.toLowerCase())
+    source && typeof source === 'string' && facts.brand && typeof facts.brand === 'string' && source.toLowerCase().includes(facts.brand.toLowerCase())
   );
   
   if (brandConsistency && brandSources.length >= 2) {
@@ -664,7 +664,7 @@ async function runAllChecks(
   // N2: Social Profiles
   const socialPlatforms = ['facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com', 'youtube.com', 'tiktok.com', 'pinterest.com', 'snapchat.com', 'whatsapp.com', 'telegram.org', 'discord.com', 'reddit.com', 'twitch.tv', 'github.com', 'medium.com', 'behance.net', 'dribbble.com', 'flickr.com', 'vimeo.com', 'soundcloud.com', 'spotify.com', 'apple.com/music', 'amazon.com/music', 'bandcamp.com', 'mixcloud.com', 'anchor.fm', 'clubhouse.com', 'mastodon.social', 'threads.net', 'bluesky.com'];
   
-  const sameAsLinks = allSchemaItems.find((item: Record<string, unknown>) => item.sameAs)?.sameAs || [];
+  const sameAsLinks = allSchemaItems.find((item: Record<string, unknown>) => item.sameAs)?.sameAs as string[] || [];
   const socialLinks = sameAsLinks.filter(link => 
     socialPlatforms.some(platform => link.toLowerCase().includes(platform))
   );
