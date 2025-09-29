@@ -3,6 +3,7 @@ import { AnalyzeRequest, AnalyzeResponse, Scorecard } from '@/types/scorecard';
 import { fetchRaw, renderRemotely } from '@/lib/fetcher/fetchRaw';
 import { parseHTML, extractFacts, ParsedHTML } from '@/lib/parse/dom';
 import { createCheckResult, computeCategoryScore, computeTotalScore } from '@/lib/analyze/rubric';
+import { generateAIInsights, AnalysisContext } from '@/lib/ai/analysis';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -65,12 +66,38 @@ export async function POST(request: NextRequest) {
       phase: 1, // Keep for backward compatibility, but not used
     };
 
+    // Generate AI insights if OpenAI is configured
+    let aiInsights = null;
+    console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log('Starting AI insights generation...');
+        const analysisContext: AnalysisContext = {
+          url: body.url,
+          parsed,
+          scorecard,
+          brand: facts.brand as string,
+          locality: facts.locality as string
+        };
+        console.log('Analysis context:', { url: analysisContext.url, brand: analysisContext.brand, locality: analysisContext.locality });
+        aiInsights = await generateAIInsights(analysisContext);
+        console.log('AI insights generated successfully:', !!aiInsights);
+      } catch (error) {
+        console.error('AI insights generation failed:', error);
+        console.error('Error details:', error);
+        // Continue without AI insights if it fails
+      }
+    } else {
+      console.log('No OpenAI API key found, skipping AI insights');
+    }
+
     const duration = Date.now() - startTime;
     console.log(`Analysis completed in ${duration}ms for ${url}`);
     
     return NextResponse.json({
       success: true,
       scorecard,
+      ai_insights: aiInsights as unknown as Record<string, unknown> | undefined,
       duration_ms: duration
     } as AnalyzeResponse);
 

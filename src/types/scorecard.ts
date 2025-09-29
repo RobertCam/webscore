@@ -58,6 +58,8 @@ export interface AnalyzeRequest {
 export interface AnalyzeResponse {
   success: boolean;
   scorecard?: Scorecard;
+  ai_insights?: Record<string, unknown>; // AI insights from OpenAI analysis
+  duration_ms?: number;
   error?: string;
 }
 

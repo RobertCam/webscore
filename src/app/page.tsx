@@ -2,16 +2,44 @@
 
 import { useState } from 'react';
 import { AnalyzeRequest, AnalyzeResponse, Scorecard } from '@/types/scorecard';
+import ReactMarkdown from 'react-markdown';
+
+// Interface for AI insights 
+interface AIInsights {
+  markdownResponse?: string;
+  // Keep all the old fields for the regular analysis display
+  brandVoiceAnalysis?: {
+    consistency: 'high' | 'medium' | 'low';
+    recommendations: string[];
+    firstPartyContent: string[];
+  };
+  trendAnalysis?: {
+    currentTrends: string[];
+    audienceSentiment: 'positive' | 'neutral' | 'negative';
+    opportunities: string[];
+  };
+  contentRecommendations?: {
+    aiSearchOptimization: string[];
+    contentGaps: string[];
+    schemaSuggestions: string[];
+  };
+  competitiveInsights?: {
+    marketPosition: string;
+    differentiationOpportunities: string[];
+  };
+}
 import { getCheckInfo } from '@/lib/analyze/checkInfo';
 
 export default function Home() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
+  const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedCheck, setSelectedCheck] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerContent, setDrawerContent] = useState<'check' | 'rubric' | 'evidence'>('check');
+  const [activeTab, setActiveTab] = useState<'score' | 'ai'>('score');
   
   // const allCategories = getAllCategoriesWithChecks();
 
@@ -42,6 +70,12 @@ export default function Home() {
       }
 
       setScorecard(data.scorecard!);
+      setAiInsights(data.ai_insights as AIInsights || null);
+      
+      // Switch to AI tab if AI insights are available
+      if (data.ai_insights) {
+        setActiveTab('ai');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
@@ -101,15 +135,15 @@ export default function Home() {
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Analyze URL</h2>
-             <button
-               onClick={() => {
-                 setDrawerContent('rubric');
-                 setDrawerOpen(true);
-               }}
-               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-             >
-               📊 View Rubric
-             </button>
+              <button
+                onClick={() => {
+                  setDrawerContent('rubric');
+                  setDrawerOpen(true);
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              >
+                📊 View Rubric
+              </button>
             </div>
             <div className="flex gap-4">
               <input
@@ -138,6 +172,38 @@ export default function Home() {
           {/* Results */}
           {scorecard && (
             <div className="space-y-6">
+              {/* Tab Navigation */}
+              <div className="bg-white rounded-lg shadow-md">
+                <div className="border-b border-gray-200">
+                  <nav className="flex space-x-8 px-6">
+                    <button
+                      onClick={() => setActiveTab('score')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'score'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📊 Score Analysis
+                    </button>
+                    <button
+                      style={{ display: aiInsights ? 'block' : 'none' }}
+                      onClick={() => setActiveTab('ai')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'ai'
+                          ? 'border-purple-500 text-purple-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      🤖 AI Insights
+                    </button>
+                  </nav>
+                </div>
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === 'score' && (
+                <div className="space-y-6">
               {/* Overall Score */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -286,6 +352,42 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+            </div>
+              )}
+
+              {activeTab === 'ai' && aiInsights && (
+                <div className="space-y-6 p-6">
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-purple-900 mb-3">AI-Powered Insights</h3>
+                    <p className="text-purple-800 text-sm">
+                      Advanced analysis using OpenAI to provide brand voice comparison, trend analysis, and content recommendations.
+                    </p>
+                  </div>
+
+                  {/* Raw AI Analysis */}
+                  {aiInsights.markdownResponse && (
+                    <div className="space-y-6">
+                      <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4 text-lg">🤖 AI Content Strategy Analysis</h3>
+                        <div className="prose prose-sm max-w-none text-gray-700">
+                          <ReactMarkdown>{aiInsights.markdownResponse}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>)
+                  }
+                </div>
+              )}
+
+              {activeTab === 'ai' && !aiInsights && (
+                <div className="space-y-6 p-6">
+                  <div className="bg-gray-50 p-4 rounded-lg text-center">
+                    <h3 className="font-semibold text-gray-900 mb-2">AI Insights Not Available</h3>
+                    <p className="text-gray-600 text-sm">
+                      AI insights require OpenAI API configuration. Set the OPENAI_API_KEY environment variable to enable this feature.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -490,6 +592,7 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>
