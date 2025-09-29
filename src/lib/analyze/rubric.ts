@@ -69,7 +69,7 @@ export function createCheckResult(
   id: string,
   status: CheckStatus,
   evidence: string[] = [],
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): CheckResult {
   const category = rubric.categories.find(c => 
     c.checks.some(check => check.id === id)

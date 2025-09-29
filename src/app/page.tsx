@@ -13,7 +13,7 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerContent, setDrawerContent] = useState<'check' | 'rubric' | 'evidence'>('check');
   
-  const allCategories = getAllCategoriesWithChecks();
+  // const allCategories = getAllCategoriesWithChecks();
 
   const handleAnalyze = async () => {
     if (!url.trim()) {

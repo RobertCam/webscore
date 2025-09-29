@@ -16,7 +16,7 @@ export interface ParsedHTML {
   headings: { level: number; text: string; id?: string }[];
   images: { src: string; alt?: string }[];
   links: { href: string; text: string }[];
-  jsonLd: any[];
+  jsonLd: Record<string, unknown>[];
   mainText?: string;
 }
 
@@ -77,7 +77,7 @@ export function parseHTML(html: string): ParsedHTML {
   });
 
   // JSON-LD
-  const jsonLd: any[] = [];
+  const jsonLd: Record<string, unknown>[] = [];
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const content = $(el).html();
@@ -89,7 +89,7 @@ export function parseHTML(html: string): ParsedHTML {
           jsonLd.push(parsed);
         }
       }
-    } catch (error) {
+    } catch {
       // Invalid JSON-LD, skip
     }
   });
@@ -175,7 +175,10 @@ export function extractFacts(parsed: ParsedHTML): DetectedFacts {
   const localitySources = [
     parsed.title,
     parsed.h1,
-    ...parsed.jsonLd.map(item => item.address?.locality || item.address?.addressLocality)
+    ...parsed.jsonLd.map(item => {
+      const address = item.address as Record<string, unknown> | undefined;
+      return address?.locality || address?.addressLocality;
+    })
   ].filter(Boolean);
   
   // Simple locality extraction (look for common patterns)
@@ -199,20 +202,22 @@ export function extractFacts(parsed: ParsedHTML): DetectedFacts {
   
   // Extract address and geo from JSON-LD
   for (const item of parsed.jsonLd) {
-    if (item.address) {
+    const address = item.address as Record<string, unknown> | undefined;
+    if (address) {
       facts.address = {
-        street: item.address.streetAddress,
-        locality: item.address.addressLocality,
-        region: item.address.addressRegion,
-        postal: item.address.postalCode,
-        country: item.address.addressCountry,
+        street: address.streetAddress as string,
+        locality: address.addressLocality as string,
+        region: address.addressRegion as string,
+        postal: address.postalCode as string,
+        country: address.addressCountry as string,
       };
     }
     
-    if (item.geo) {
+    const geo = item.geo as Record<string, unknown> | undefined;
+    if (geo) {
       facts.geo = {
-        lat: parseFloat(item.geo.latitude),
-        lon: parseFloat(item.geo.longitude),
+        lat: parseFloat(geo.latitude as string),
+        lon: parseFloat(geo.longitude as string),
       };
     }
   }

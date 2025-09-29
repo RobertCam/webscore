@@ -27,7 +27,7 @@ export interface CheckResult {
   status: CheckStatus;
   score: number; // actual points awarded
   evidence: string[]; // evidence strings for debugging/UI
-  details?: Record<string, any>; // additional structured data
+  details?: Record<string, unknown>; // additional structured data
 }
 
 export interface CategoryResult {

@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
 // All checks implementation
 async function runAllChecks(
   rawData: { html: string; finalUrl: string; status: number },
-  parsed: any,
-  facts: any
+  parsed: ParsedHTML,
+  facts: Record<string, unknown>
 ) {
   const results = [];
 
@@ -139,7 +139,7 @@ async function runAllChecks(
     } else {
       results.push(createCheckResult('F3', 'pass', ['No robots.txt found (default allow)']));
     }
-  } catch (error) {
+  } catch {
     results.push(createCheckResult('F3', 'pass', ['No robots.txt found (default allow)']));
   }
 
@@ -161,7 +161,7 @@ async function runAllChecks(
           ...(escapedCanonicalTag ? [`HTML: ${escapedCanonicalTag}`] : [])
         ]));
       }
-    } catch (error) {
+    } catch {
       results.push(createCheckResult('F4', 'fail', [
         'Canonical URL is invalid',
         ...(escapedCanonicalTag ? [`HTML: ${escapedCanonicalTag}`] : [])
@@ -337,7 +337,7 @@ async function runAllChecks(
           `Canonical host (${canonicalUrl.hostname}) does not match current host (${currentUrl.hostname})`
         ]));
       }
-    } catch (error) {
+    } catch {
       results.push(createCheckResult('M6', 'fail', ['Invalid canonical URL']));
     }
   } else {
@@ -346,7 +346,7 @@ async function runAllChecks(
 
   // S1: Core Business Schema (Highest Weight)
   const businessTypes = ['LocalBusiness', 'Organization', 'Store', 'Restaurant', 'Hotel', 'MedicalBusiness', 'ProfessionalService', 'FinancialService', 'AutomotiveBusiness', 'EntertainmentBusiness'];
-  const businessSchemaItems = parsed.jsonLd.filter((item: any) => {
+  const businessSchemaItems = parsed.jsonLd.filter((item: Record<string, unknown>) => {
     const type = item['@type'];
     if (typeof type === 'string') {
       return businessTypes.some(businessType => type.includes(businessType));
@@ -375,7 +375,7 @@ async function runAllChecks(
 
   // S2: Content Enhancement Schema (Medium Weight)
   const contentTypes = ['FAQ', 'Product', 'Service', 'Offer', 'Event', 'Article', 'BlogPosting', 'HowTo', 'Recipe', 'Review'];
-  const foundContentTypes = parsed.jsonLd.filter((item: any) => {
+  const foundContentTypes = parsed.jsonLd.filter((item: Record<string, unknown>) => {
     const type = item['@type'];
     if (typeof type === 'string') {
       return contentTypes.some(contentType => type.includes(contentType));
@@ -411,7 +411,7 @@ async function runAllChecks(
   const contactFields = ['address', 'telephone', 'email', 'openingHours', 'contactPoint', 'geo', 'url'];
   const allSchemaItems = parsed.jsonLd.flat();
   const foundContactFields = contactFields.filter(field => 
-    allSchemaItems.some((item: any) => item[field])
+    allSchemaItems.some((item: Record<string, unknown>) => item[field])
   );
   
   if (foundContactFields.length >= 3) {
@@ -432,7 +432,7 @@ async function runAllChecks(
 
   // S4: Rich Content Schema (Lower Weight)
   const richContentTypes = ['Review', 'Rating', 'ImageObject', 'VideoObject', 'AudioObject', 'MediaObject', 'BreadcrumbList', 'SiteNavigationElement'];
-  const foundRichContent = parsed.jsonLd.filter((item: any) => {
+  const foundRichContent = parsed.jsonLd.filter((item: Record<string, unknown>) => {
     const type = item['@type'];
     if (typeof type === 'string') {
       return richContentTypes.some(richType => type.includes(richType));
@@ -485,8 +485,8 @@ async function runAllChecks(
 
   // C2: Heading Structure
   let headingScore = 0;
-  let maxHeadingScore = 5;
-  let headingIssues: string[] = [];
+  const maxHeadingScore = 5;
+  const headingIssues: string[] = [];
   
   // Check for logical hierarchy (no jumps)
   for (let i = 0; i < parsed.headings.length - 1; i++) {
@@ -570,7 +570,7 @@ async function runAllChecks(
   } else {
     // Check for dateModified in any schema
     const allSchemaItems = parsed.jsonLd.flat();
-    const dateModified = allSchemaItems.find((item: any) => item.dateModified)?.dateModified;
+    const dateModified = allSchemaItems.find((item: Record<string, unknown>) => item.dateModified)?.dateModified;
     
     if (dateModified) {
       try {
@@ -587,7 +587,7 @@ async function runAllChecks(
             `Schema shows old update: ${daysDiff} days ago`
           ]));
         }
-      } catch (error) {
+      } catch {
         results.push(createCheckResult('R1', 'fail', [
           'Invalid dateModified format in schema'
         ]));
@@ -634,14 +634,14 @@ async function runAllChecks(
         'No sitemap.xml found'
       ]));
     }
-  } catch (error) {
+  } catch {
     results.push(createCheckResult('R2', 'fail', [
       'Error checking sitemap'
     ]));
   }
 
   // N1: Brand consistent
-  const schemaName = allSchemaItems.find((item: any) => item.name)?.name;
+  const schemaName = allSchemaItems.find((item: Record<string, unknown>) => item.name)?.name;
   const brandSources = [parsed.title, parsed.h1, schemaName].filter(Boolean);
   const brandConsistency = brandSources.every(source => 
     source && facts.brand && source.toLowerCase().includes(facts.brand.toLowerCase())
@@ -664,7 +664,7 @@ async function runAllChecks(
   // N2: Social Profiles
   const socialPlatforms = ['facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com', 'youtube.com', 'tiktok.com', 'pinterest.com', 'snapchat.com', 'whatsapp.com', 'telegram.org', 'discord.com', 'reddit.com', 'twitch.tv', 'github.com', 'medium.com', 'behance.net', 'dribbble.com', 'flickr.com', 'vimeo.com', 'soundcloud.com', 'spotify.com', 'apple.com/music', 'amazon.com/music', 'bandcamp.com', 'mixcloud.com', 'anchor.fm', 'clubhouse.com', 'mastodon.social', 'threads.net', 'bluesky.com'];
   
-  const sameAsLinks = allSchemaItems.find((item: any) => item.sameAs)?.sameAs || [];
+  const sameAsLinks = allSchemaItems.find((item: Record<string, unknown>) => item.sameAs)?.sameAs || [];
   const socialLinks = sameAsLinks.filter(link => 
     socialPlatforms.some(platform => link.toLowerCase().includes(platform))
   );
