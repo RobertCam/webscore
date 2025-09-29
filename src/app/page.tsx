@@ -103,7 +103,7 @@ export default function Home() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="Enter a location page URL (e.g., https://example.com/locations/chicago)"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 disabled={loading}
               />
               <button
@@ -233,18 +233,22 @@ export default function Home() {
                           const checkInfo = getCheckInfo(check.id);
                           const checkName = checkInfo?.name || check.id;
                           return (
-                            <div key={check.id} className="border-l-4 border-gray-200 pl-4">
-                              <div className="font-medium text-sm text-gray-700">
-                                {checkName}: {check.status} ({check.score} pts)
+                            <div key={check.id} className="border-l-4 border-gray-200 pl-4 mb-3 p-3 bg-gray-50 rounded-r-lg">
+                              <div className="font-medium text-sm text-gray-800 mb-2">
+                                {checkName}: <span className={`font-semibold ${check.status === 'pass' ? 'text-green-600' : check.status === 'partial' ? 'text-yellow-600' : 'text-red-600'}`}>{check.status}</span> ({check.score} pts)
                               </div>
                               {check.evidence.length > 0 && (
-                                <ul className="text-sm text-gray-600 mt-1">
-                                  {check.evidence.map((evidence, idx) => (
-                                    <li key={idx} className="list-disc list-inside">
-                                      {evidence}
-                                    </li>
-                                  ))}
-                                </ul>
+                                <div className="bg-white p-3 rounded border-l-2 border-gray-300">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Evidence:</div>
+                                  <ul className="text-sm text-gray-700 space-y-1">
+                                    {check.evidence.map((evidence, idx) => (
+                                      <li key={idx} className="flex items-start">
+                                        <span className="text-gray-400 mr-2">•</span>
+                                        <span className="flex-1">{evidence}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
                               )}
                             </div>
                           );

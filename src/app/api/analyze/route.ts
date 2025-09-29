@@ -189,7 +189,12 @@ async function runAllChecks(
 
   // M1: Title exists
   if (parsed.title) {
-    results.push(createCheckResult('M1', 'pass', [`Title found: "${parsed.title}"`]));
+    const titleTag = rawData.html.match(/<title[^>]*>.*?<\/title>/i)?.[0] || '';
+    const escapedTitleTag = titleTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    results.push(createCheckResult('M1', 'pass', [
+      `Title found: "${parsed.title}"`,
+      ...(escapedTitleTag ? [`HTML: ${escapedTitleTag}`] : [])
+    ]));
   } else {
     results.push(createCheckResult('M1', 'fail', ['No title tag found']));
   }
@@ -220,7 +225,12 @@ async function runAllChecks(
 
   // M3: Meta Description
   if (parsed.description) {
-    results.push(createCheckResult('M3', 'pass', [`Meta description found: "${parsed.description.substring(0, 100)}..."`]));
+    const metaDescTag = rawData.html.match(/<meta[^>]*name=["']description["'][^>]*>/i)?.[0] || '';
+    const escapedMetaDescTag = metaDescTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    results.push(createCheckResult('M3', 'pass', [
+      `Meta description found: "${parsed.description.substring(0, 100)}..."`,
+      ...(escapedMetaDescTag ? [`HTML: ${escapedMetaDescTag}`] : [])
+    ]));
   } else {
     results.push(createCheckResult('M3', 'fail', ['No meta description found']));
   }
@@ -662,18 +672,24 @@ async function runAllChecks(
       }
     });
     
+    // Collect example img tags for evidence
+    const exampleImgTags = imgTags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+    
     if (imagesWithBrandInfo === totalImages) {
       results.push(createCheckResult('N4', 'pass', [
-        `All ${totalImages} images have brand/location info in alt text`
+        `All ${totalImages} images have brand/location info in alt text`,
+        ...(exampleImgTags.length > 0 ? [`Examples: ${exampleImgTags.join(', ')}`] : [])
       ]));
     } else if (imagesWithBrandInfo > totalImages * 0.5) {
       results.push(createCheckResult('N4', 'partial', [
-        `${imagesWithBrandInfo}/${totalImages} images have brand/location info in alt text`
+        `${imagesWithBrandInfo}/${totalImages} images have brand/location info in alt text`,
+        ...(exampleImgTags.length > 0 ? [`Examples: ${exampleImgTags.join(', ')}`] : [])
       ]));
     } else {
       results.push(createCheckResult('N4', 'fail', [
         `Only ${imagesWithBrandInfo}/${totalImages} images have brand/location info in alt text`,
-        'Include business name, brand, or location in image alt text'
+        'Include business name, brand, or location in image alt text',
+        ...(exampleImgTags.length > 0 ? [`Examples: ${exampleImgTags.join(', ')}`] : [])
       ]));
     }
   }
@@ -693,21 +709,27 @@ async function runAllChecks(
     }
   });
   
+  // Collect example img tags for evidence
+  const a1ExampleImgTags = a1ImgTags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  
   if (a1TotalImages === 0) {
     results.push(createCheckResult('A1', 'pass', [
       'No images found on page'
     ]));
   } else if (a1ImagesWithAlt === a1TotalImages) {
     results.push(createCheckResult('A1', 'pass', [
-      `All ${a1TotalImages} images have alt text`
+      `All ${a1TotalImages} images have alt text`,
+      ...(a1ExampleImgTags.length > 0 ? [`Examples: ${a1ExampleImgTags.join(', ')}`] : [])
     ]));
   } else if (a1ImagesWithAlt > a1TotalImages * 0.5) {
     results.push(createCheckResult('A1', 'partial', [
-      `${a1ImagesWithAlt}/${a1TotalImages} images have alt text`
+      `${a1ImagesWithAlt}/${a1TotalImages} images have alt text`,
+      ...(a1ExampleImgTags.length > 0 ? [`Examples: ${a1ExampleImgTags.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('A1', 'fail', [
-      `Only ${a1ImagesWithAlt}/${a1TotalImages} images have alt text`
+      `Only ${a1ImagesWithAlt}/${a1TotalImages} images have alt text`,
+      ...(a1ExampleImgTags.length > 0 ? [`Examples: ${a1ExampleImgTags.join(', ')}`] : [])
     ]));
   }
 
