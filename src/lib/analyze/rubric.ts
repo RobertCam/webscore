@@ -4,41 +4,7 @@ import rubricData from '@/config/rubric.v2.0.json';
 // Load the rubric configuration
 export const rubric: Rubric = rubricData as Rubric;
 
-// Phase configurations
-export const PHASES = {
-  0: {
-    phase: 0,
-    enabled_checks: [],
-    description: "Skeleton & UI"
-  },
-  1: {
-    phase: 1,
-    enabled_checks: ['F1', 'F2', 'F5', 'M1', 'M4', 'S1', 'S2', 'C1', 'N1'],
-    description: "MVP - Core checks"
-  },
-  2: {
-    phase: 2,
-    enabled_checks: ['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'S1', 'S2', 'S3', 'C1', 'C2', 'C3', 'C4', 'R1', 'R2', 'N1', 'N2', 'N3'],
-    description: "Core completeness"
-  },
-  3: {
-    phase: 3,
-    enabled_checks: ['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'S1', 'S2', 'S3', 'S4', 'C1', 'C2', 'C3', 'C4', 'R1', 'R2', 'N1', 'N2', 'N3'],
-    description: "Polish & DX"
-  }
-} as const;
-
-export type Phase = keyof typeof PHASES;
-
-// Get current phase (default to 1 for MVP)
-export function getCurrentPhase(): Phase {
-  return parseInt(process.env.NEXT_PUBLIC_PHASE || '1') as Phase;
-}
-
-// Check if a check is enabled in the current phase
-export function isCheckEnabled(checkId: string, phase: Phase = getCurrentPhase()): boolean {
-  return PHASES[phase].enabled_checks.includes(checkId);
-}
+// All checks are always enabled - no phase logic needed 
 
 // Check if a check can be NA
 export function canBeNA(checkId: string): boolean {
@@ -48,26 +14,19 @@ export function canBeNA(checkId: string): boolean {
 // Compute score for a category
 export function computeCategoryScore(
   categoryId: string,
-  checkResults: CheckResult[],
-  phase: Phase = getCurrentPhase()
+  checkResults: CheckResult[]
 ): CategoryResult {
   const category = rubric.categories.find(c => c.id === categoryId);
   if (!category) {
     throw new Error(`Category ${categoryId} not found`);
   }
 
-  // Filter to only enabled checks for this phase
-  const enabledChecks = category.checks.filter(check => 
-    isCheckEnabled(check.id, phase)
-  );
-
   // Calculate max possible score (excluding NA)
-  const maxScore = enabledChecks.reduce((sum, check) => sum + check.weight, 0);
+  const maxScore = category.checks.reduce((sum, check) => sum + check.weight, 0);
 
   // Calculate actual score for this category only
   const actualScore = checkResults
     .filter(result => 
-      isCheckEnabled(result.id, phase) && 
       category.checks.some(check => check.id === result.id)
     )
     .reduce((sum, result) => sum + result.score, 0);
@@ -89,15 +48,11 @@ export function computeCategoryScore(
 
 // Compute total score across all categories
 export function computeTotalScore(
-  categoryResults: CategoryResult[],
-  phase: Phase = getCurrentPhase()
+  categoryResults: CategoryResult[]
 ): number {
-  // Calculate total possible points (excluding NA categories)
+  // Calculate total possible points
   const totalPossiblePoints = rubric.categories.reduce((sum, category) => {
-    const enabledChecks = category.checks.filter(check => 
-      isCheckEnabled(check.id, phase)
-    );
-    return sum + enabledChecks.reduce((catSum, check) => catSum + check.weight, 0);
+    return sum + category.checks.reduce((catSum, check) => catSum + check.weight, 0);
   }, 0);
 
   // Calculate actual points earned

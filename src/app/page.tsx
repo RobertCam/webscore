@@ -2,12 +2,16 @@
 
 import { useState } from 'react';
 import { AnalyzeRequest, AnalyzeResponse, Scorecard } from '@/types/scorecard';
+import { getAllCategoriesWithChecks, getCheckInfo } from '@/lib/analyze/checkInfo';
 
 export default function Home() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCheck, setSelectedCheck] = useState<string | null>(null);
+  
+  const allCategories = getAllCategoriesWithChecks();
 
   const handleAnalyze = async () => {
     if (!url.trim()) {
@@ -55,6 +59,26 @@ export default function Home() {
     if (score >= 60) return 'bg-yellow-100';
     if (score >= 40) return 'bg-orange-100';
     return 'bg-red-100';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pass': return 'text-green-600 bg-green-50';
+      case 'partial': return 'text-yellow-600 bg-yellow-50';
+      case 'fail': return 'text-red-600 bg-red-50';
+      case 'na': return 'text-gray-600 bg-gray-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pass': return '✅';
+      case 'partial': return '⚠️';
+      case 'fail': return '❌';
+      case 'na': return '➖';
+      default: return '❓';
+    }
   };
 
   return (
@@ -160,19 +184,37 @@ export default function Home() {
 
                       {/* Check results */}
                       <div className="space-y-2">
-                        {category.checks.map((check) => (
-                          <div key={check.id} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${
-                                check.status === 'pass' ? 'bg-green-500' :
-                                check.status === 'partial' ? 'bg-yellow-500' :
-                                check.status === 'fail' ? 'bg-red-500' : 'bg-gray-400'
-                              }`} />
-                              <span className="text-gray-700">{check.id}: {check.status}</span>
+                        {category.checks.map((check) => {
+                          const checkInfo = getCheckInfo(check.id);
+                          const checkName = checkInfo?.name || check.id;
+                          return (
+                            <div key={check.id} className="flex items-center justify-between text-sm p-2 rounded-lg border">
+                              <div className="flex items-center gap-3 flex-1">
+                                <span className="text-lg">{getStatusIcon(check.status)}</span>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900">{checkName}</span>
+                                    <button
+                                      onClick={() => setSelectedCheck(check.id)}
+                                      className="text-blue-500 hover:text-blue-700 text-xs"
+                                    >
+                                      ℹ️
+                                    </button>
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {checkInfo?.description}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(check.status)}`}>
+                                  {check.status}
+                                </span>
+                                <span className="text-gray-500 text-xs">{check.score} pts</span>
+                              </div>
                             </div>
-                            <span className="text-gray-500">{check.score} pts</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -187,22 +229,26 @@ export default function Home() {
                     <div key={category.id}>
                       <h4 className="font-medium text-gray-900 mb-2">{category.label}</h4>
                       <div className="space-y-2">
-                        {category.checks.map((check) => (
-                          <div key={check.id} className="border-l-4 border-gray-200 pl-4">
-                            <div className="font-medium text-sm text-gray-700">
-                              {check.id}: {check.status} ({check.score} pts)
+                        {category.checks.map((check) => {
+                          const checkInfo = getCheckInfo(check.id);
+                          const checkName = checkInfo?.name || check.id;
+                          return (
+                            <div key={check.id} className="border-l-4 border-gray-200 pl-4">
+                              <div className="font-medium text-sm text-gray-700">
+                                {checkName}: {check.status} ({check.score} pts)
+                              </div>
+                              {check.evidence.length > 0 && (
+                                <ul className="text-sm text-gray-600 mt-1">
+                                  {check.evidence.map((evidence, idx) => (
+                                    <li key={idx} className="list-disc list-inside">
+                                      {evidence}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
-                            {check.evidence.length > 0 && (
-                              <ul className="text-sm text-gray-600 mt-1">
-                                {check.evidence.map((evidence, idx) => (
-                                  <li key={idx} className="list-disc list-inside">
-                                    {evidence}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -212,6 +258,71 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Check Details Modal */}
+      {selectedCheck && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {getCheckInfo(selectedCheck)?.name || selectedCheck}
+                </h3>
+                <button
+                  onClick={() => setSelectedCheck(null)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {(() => {
+                const checkInfo = getCheckInfo(selectedCheck);
+                if (!checkInfo) return null;
+                
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">What it checks:</h4>
+                      <p className="text-gray-700">{checkInfo.whatItChecks}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Why it matters:</h4>
+                      <p className="text-gray-700">{checkInfo.whyItMatters}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">How to pass:</h4>
+                      <p className="text-gray-700">{checkInfo.howToPass}</p>
+                    </div>
+                    
+                    {checkInfo.examples && checkInfo.examples.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Examples:</h4>
+                        <ul className="space-y-1">
+                          {checkInfo.examples.map((example, idx) => (
+                            <li key={idx} className="text-gray-700 text-sm font-mono bg-gray-50 p-2 rounded">
+                              {example}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Category: {checkInfo.category}</span>
+                        <span>Weight: {checkInfo.weight} points</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
