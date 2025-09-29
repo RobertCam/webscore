@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧭 Location Pages Webscore
 
-## Getting Started
+A lean, deterministic analyzer that scores a URL (0–100) for AI‑search/LLM indexability on **location pages**.
 
-First, run the development server:
+## Quick Start
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   Create a `.env.local` file with:
+   ```env
+   CF_RENDER_ENDPOINT=https://your-worker.your-subdomain.workers.dev/?url=
+   CF_RENDER_TOKEN=your-secure-token-here
+   NEXT_PUBLIC_PHASE=1
+   ```
+
+3. **Deploy Cloudflare Worker:**
+   ```bash
+   cd cloudflare
+   npm install -g wrangler
+   wrangler deploy
+   ```
+
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+## Architecture
+
+- **Frontend:** Next.js 14 with App Router
+- **Backend:** Next.js API routes
+- **JS Rendering:** Cloudflare Worker with Browser Rendering API
+- **HTML Parsing:** Cheerio, @mozilla/readability
+- **Scoring:** Deterministic checks based on rubric v2.0
+
+## Phases
+
+- **Phase 0:** Skeleton & UI
+- **Phase 1:** MVP (F1, F2, F5, M1, M4, S1, S2 subset, C1, N1)
+- **Phase 2:** Core completeness
+- **Phase 3:** Polish & DX
+
+## Scoring Categories
+
+1. **Fetchability (20 pts)** - Can bots access and index the page?
+2. **Metadata (20 pts)** - Title, description, Open Graph tags
+3. **Schema (25 pts)** - JSON-LD structured data
+4. **Semantic Content (15 pts)** - Headings, content structure
+5. **Freshness (10 pts)** - Recent updates, sitemap recency
+6. **Brand Clarity (10 pts)** - Consistent branding across elements
+
+## API Usage
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+curl -X POST http://localhost:3000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/locations/chicago"}'
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Deploy Cloudflare Worker and update `CF_RENDER_ENDPOINT`
+2. Deploy to Vercel with environment variables
+3. Test with real location page URLs

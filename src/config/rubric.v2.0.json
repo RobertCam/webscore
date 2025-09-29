@@ -1,0 +1,168 @@
+{
+  "version": "2.0.0",
+  "allow_na": ["S4","C3","R1"],
+  "categories": [
+    {
+      "id": "fetchability",
+      "label": "Fetchability",
+      "nominal_weight": 20,
+      "checks": [
+        {
+          "id": "F1",
+          "label": "HTTP 200",
+          "weight": 6
+        },
+        {
+          "id": "F2",
+          "label": "No noindex meta",
+          "weight": 4
+        },
+        {
+          "id": "F3",
+          "label": "robots.txt not blocking; GPTBot neutral",
+          "weight": 4
+        },
+        {
+          "id": "F4",
+          "label": "Canonical exists & absolute",
+          "weight": 3
+        },
+        {
+          "id": "F5",
+          "label": "JS-render parity (Cloudflare): H1 + text parity",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "id": "metadata",
+      "label": "Metadata (incl. OG)",
+      "nominal_weight": 20,
+      "checks": [
+        {
+          "id": "M1",
+          "label": "Title exists",
+          "weight": 3
+        },
+        {
+          "id": "M2",
+          "label": "Title optimized: brand + locality",
+          "weight": 3
+        },
+        {
+          "id": "M3",
+          "label": "Meta description exists",
+          "weight": 3
+        },
+        {
+          "id": "M4",
+          "label": "Meta description contains brand + locality (partial if only one)",
+          "weight": 4
+        },
+        {
+          "id": "M5",
+          "label": "Open Graph basics (og:title, og:description, og:url, og:image)",
+          "weight": 4
+        },
+        {
+          "id": "M6",
+          "label": "Canonical host matches",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "id": "schema",
+      "label": "Schema",
+      "nominal_weight": 25,
+      "checks": [
+        {
+          "id": "S1",
+          "label": "Valid JSON-LD parses",
+          "weight": 5
+        },
+        {
+          "id": "S2",
+          "label": "LocalBusiness essentials (name,url,telephone,address,geo,hours)",
+          "weight": 10
+        },
+        {
+          "id": "S3",
+          "label": "Org/WebSite/WebPage coherence",
+          "weight": 7
+        },
+        {
+          "id": "S4",
+          "label": "Meaningful dateModified",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "id": "semantics",
+      "label": "Semantic Content",
+      "nominal_weight": 15,
+      "checks": [
+        {
+          "id": "C1",
+          "label": "Single H1 with locality",
+          "weight": 5
+        },
+        {
+          "id": "C2",
+          "label": "Heading outline quality",
+          "weight": 5
+        },
+        {
+          "id": "C3",
+          "label": "Lists/tables for services/amenities",
+          "weight": 3
+        },
+        {
+          "id": "C4",
+          "label": "Section anchors for deep-links",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "id": "freshness",
+      "label": "Freshness",
+      "nominal_weight": 10,
+      "checks": [
+        {
+          "id": "R1",
+          "label": "Recent visible or schema date",
+          "weight": 4
+        },
+        {
+          "id": "R2",
+          "label": "Sitemap discovered & <lastmod> ≤180d",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "brand",
+      "label": "Brand Clarity",
+      "nominal_weight": 10,
+      "checks": [
+        {
+          "id": "N1",
+          "label": "Brand consistent (title/H1/schema)",
+          "weight": 4
+        },
+        {
+          "id": "N2",
+          "label": "sameAs to authoritative profiles",
+          "weight": 3
+        },
+        {
+          "id": "N3",
+          "label": "Logo in schema + visible",
+          "weight": 3
+        }
+      ]
+    }
+  ]
+}
