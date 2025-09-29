@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body: AnalyzeRequest = await request.json();
-    const { url } = body;
+    const { url, enableAiInsights = true } = body;
 
     if (!url) {
       return NextResponse.json({
@@ -66,10 +66,12 @@ export async function POST(request: NextRequest) {
       phase: 1, // Keep for backward compatibility, but not used
     };
 
-    // Generate AI insights if OpenAI is configured
+    // Generate AI insights if enabled and OpenAI is configured
     let aiInsights = null;
+    console.log('AI Insights enabled:', enableAiInsights);
     console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
-    if (process.env.OPENAI_API_KEY) {
+    
+    if (enableAiInsights && process.env.OPENAI_API_KEY) {
       try {
         console.log('Starting AI insights generation...');
         const analysisContext: AnalysisContext = {
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
         // Continue without AI insights if it fails
       }
     } else {
-      console.log('No OpenAI API key found, skipping AI insights');
+      console.log('AI insights skipped:', !enableAiInsights ? 'Disabled by user' : 'No OpenAI API key found');
     }
 
     const duration = Date.now() - startTime;

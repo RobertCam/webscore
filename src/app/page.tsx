@@ -40,6 +40,7 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerContent, setDrawerContent] = useState<'check' | 'rubric' | 'evidence'>('check');
   const [activeTab, setActiveTab] = useState<'score' | 'ai'>('score');
+  const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   
   // const allCategories = getAllCategoriesWithChecks();
 
@@ -59,7 +60,10 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: url.trim() } as AnalyzeRequest),
+        body: JSON.stringify({ 
+          url: url.trim(),
+          enableAiInsights: aiInsightsEnabled 
+        } as AnalyzeRequest & { enableAiInsights: boolean }),
       });
 
       const data: AnalyzeResponse = await response.json();
@@ -73,7 +77,7 @@ export default function Home() {
       setAiInsights(data.ai_insights as AIInsights || null);
       
       // Keep on Score Analysis tab - AI will appear when ready
-      // Only switch to AI tab if explicitly requested
+      // Only switch to AI tab if AI insights are enabled and available
       setActiveTab('score');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
@@ -161,6 +165,36 @@ export default function Home() {
                 {loading ? 'Analyzing...' : 'Analyze'}
               </button>
             </div>
+            
+            {/* AI Insights Toggle */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">🤖 AI Insights</span>
+                  <span className="text-xs text-gray-500">({aiInsightsEnabled ? 'Enabled' : 'Disabled'})</span>
+                </div>
+                <button
+                  onClick={() => setAiInsightsEnabled(!aiInsightsEnabled)}
+                  disabled={loading}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    aiInsightsEnabled ? 'bg-purple-600' : 'bg-gray-300'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      aiInsightsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {aiInsightsEnabled 
+                  ? 'Get advanced content recommendations and brand voice analysis' 
+                  : 'Get standard SEO score analysis only'
+                }
+              </p>
+            </div>
+            
             {error && (
               <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
                 {error}
@@ -186,7 +220,7 @@ export default function Home() {
                       📊 Score Analysis
                     </button>
                     <button
-                      style={{ display: aiInsights ? 'block' : 'none' }}
+                      style={{ display: aiInsightsEnabled && aiInsights ? 'block' : 'none' }}
                       onClick={() => setActiveTab('ai')}
                       className={`py-4 px-1 border-b-2 font-medium text-sm ${
                         activeTab === 'ai'
@@ -357,12 +391,15 @@ export default function Home() {
                 </div>
               )}
 
-              {activeTab === 'ai' && !aiInsights && (
+              {activeTab === 'ai' && (!aiInsightsEnabled || !aiInsights) && (
                 <div className="space-y-6 p-6">
                   <div className="bg-gray-50 p-4 rounded-lg text-center">
                     <h3 className="font-semibold text-gray-900 mb-2">AI Insights Not Available</h3>
                     <p className="text-gray-600 text-sm">
-                      AI insights require OpenAI API configuration. Set the OPENAI_API_KEY environment variable to enable this feature.
+                      {!aiInsightsEnabled 
+                        ? 'AI insights have been disabled. Enable the toggle to use this feature.'
+                        : 'AI insights require OpenAI API configuration. Set the OPENAI_API_KEY environment variable to enable this feature.'
+                      }
                     </p>
                   </div>
                 </div>

@@ -53,6 +53,7 @@ export interface Scorecard {
 // API request/response types
 export interface AnalyzeRequest {
   url: string;
+  enableAiInsights?: boolean; // Optional toggle for AI insights
 }
 
 export interface AnalyzeResponse {
