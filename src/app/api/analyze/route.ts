@@ -374,7 +374,7 @@ async function runAllChecks(
   }
 
   // S1: Core Business Schema (Highest Weight)
-  const businessTypes = ['LocalBusiness', 'Organization', 'Store', 'Restaurant', 'Hotel', 'MedicalBusiness', 'ProfessionalService', 'FinancialService', 'AutomotiveBusiness', 'EntertainmentBusiness'];
+  const businessTypes = ['LocalBusiness', 'Organization', 'Store', 'Restaurant', 'Hotel', 'MedicalBusiness', 'ProfessionalService', 'FinancialService', 'AutomotiveBusiness', 'EntertainmentBusiness', 'CafeOrCoffeeShop', 'FoodEstablishment', 'Place', 'Thing'];
   const businessSchemaItems = parsed.jsonLd.filter((item: Record<string, unknown>) => {
     const type = item['@type'];
     if (typeof type === 'string') {
