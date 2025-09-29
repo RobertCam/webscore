@@ -67,10 +67,10 @@ export const CHECK_INFO: Record<string, CheckInfo> = {
     category: 'Fetchability',
     weight: 3,
     description: 'Compares content between raw HTML and JavaScript-rendered version',
-    whatItChecks: 'Compares H1 and main text content between server-side HTML and client-side rendered HTML',
+    whatItChecks: 'Compares H1, text content, images, and links between server-side HTML and client-side rendered HTML',
     whyItMatters: 'AI systems primarily see server-side content. If key information only appears after JavaScript, it may be missed',
-    howToPass: 'Ensure important content (business name, address, services) appears in the initial HTML response',
-    examples: ['✅ Business name in <h1> tag in raw HTML', '❌ Business name only added via JavaScript']
+    howToPass: 'Ensure important content (business name, address, services, images, links) appears in the initial HTML response',
+    examples: ['✅ All content visible in raw HTML', '❌ Significant content differences between raw and rendered HTML']
   },
   
   // Metadata Checks
@@ -284,14 +284,14 @@ export const CHECK_INFO: Record<string, CheckInfo> = {
   
   N2: {
     id: 'N2',
-    name: 'Authoritative Profiles',
+    name: 'Social Profiles',
     category: 'Brand Clarity',
     weight: 3,
-    description: 'Links to authoritative business profiles (corporate site, LinkedIn, etc.)',
-    whatItChecks: 'Looks for sameAs links to official business profiles and websites',
-    whyItMatters: 'Authoritative profile links help AI systems verify business legitimacy and find more information',
-    howToPass: 'Include sameAs links to your official website, LinkedIn, and other verified profiles',
-    examples: ['✅ sameAs: ["https://starbucks.com", "https://linkedin.com/company/starbucks"]', '❌ No sameAs links']
+    description: 'Links to social media profiles and platforms',
+    whatItChecks: 'Looks for sameAs links to social media platforms like Facebook, Instagram, LinkedIn, Twitter, etc.',
+    whyItMatters: 'Social profile links help AI systems find more business information and verify legitimacy across platforms',
+    howToPass: 'Include sameAs links to your social media profiles (Facebook, Instagram, LinkedIn, Twitter, etc.)',
+    examples: ['✅ sameAs: ["https://facebook.com/business", "https://instagram.com/business"]', '❌ No social profile links']
   },
   
   N3: {

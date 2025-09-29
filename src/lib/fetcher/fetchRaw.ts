@@ -7,6 +7,9 @@ export async function fetchRaw(url: string): Promise<{
   status: number;
 }> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; WebpageScoreBot/1.0; +https://webpagescore.com/bot)',
@@ -18,7 +21,10 @@ export async function fetchRaw(url: string): Promise<{
         'Upgrade-Insecure-Requests': '1',
       },
       redirect: 'follow',
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     const html = await response.text();
     const finalUrl = response.url;
@@ -29,6 +35,9 @@ export async function fetchRaw(url: string): Promise<{
       status: response.status,
     };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timeout for ${url} (10s limit)`);
+    }
     throw new Error(`Failed to fetch ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -51,11 +60,17 @@ export async function renderRemotely(url: string): Promise<RenderResponse> {
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for JS rendering
+    
     const response = await fetch(`${endpoint}?url=${encodeURIComponent(url)}`, {
       method: 'GET',
       headers,
       cache: 'no-store',
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Render failed: ${response.status} ${response.statusText}`);
@@ -72,6 +87,9 @@ export async function renderRemotely(url: string): Promise<RenderResponse> {
       html: data.html
     } as RenderResponse;
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`JS rendering timeout for ${url} (15s limit)`);
+    }
     throw new Error(`Failed to render ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

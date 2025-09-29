@@ -5,6 +5,8 @@ import { parseHTML, extractFacts } from '@/lib/parse/dom';
 import { createCheckResult, computeCategoryScore, computeTotalScore } from '@/lib/analyze/rubric';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const body: AnalyzeRequest = await request.json();
     const { url } = body;
@@ -63,16 +65,23 @@ export async function POST(request: NextRequest) {
       phase: 1, // Keep for backward compatibility, but not used
     };
 
+    const duration = Date.now() - startTime;
+    console.log(`Analysis completed in ${duration}ms for ${url}`);
+    
     return NextResponse.json({
       success: true,
-      scorecard
+      scorecard,
+      duration_ms: duration
     } as AnalyzeResponse);
 
   } catch (error) {
-    console.error('Analysis error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`Analysis failed after ${duration}ms:`, error);
+    
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      duration_ms: duration
     } as AnalyzeResponse, { status: 500 });
   }
 }
@@ -93,10 +102,19 @@ async function runAllChecks(
   }
 
   // F2: No noindex meta
+  const noindexTag = rawData.html.match(/<meta[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex[^"']*["'][^>]*>/i)?.[0] || '';
+  const escapedNoindexTag = noindexTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
   if (!parsed.noindex) {
-    results.push(createCheckResult('F2', 'pass', ['No noindex meta tag found']));
+    results.push(createCheckResult('F2', 'pass', [
+      'No noindex meta tag found',
+      ...(escapedNoindexTag ? [`HTML: ${escapedNoindexTag}`] : [])
+    ]));
   } else {
-    results.push(createCheckResult('F2', 'fail', ['noindex meta tag found']));
+    results.push(createCheckResult('F2', 'fail', [
+      'noindex meta tag found',
+      ...(escapedNoindexTag ? [`HTML: ${escapedNoindexTag}`] : [])
+    ]));
   }
 
   // F3: Robots.txt compliance
@@ -126,25 +144,39 @@ async function runAllChecks(
   }
 
   // F4: Canonical URL
+  const canonicalTag = rawData.html.match(/<link[^>]*rel=["']canonical["'][^>]*>/i)?.[0] || '';
+  const escapedCanonicalTag = canonicalTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
   if (parsed.canonical) {
     try {
       const canonicalUrl = new URL(parsed.canonical);
       if (canonicalUrl.protocol === 'http:' || canonicalUrl.protocol === 'https:') {
-        results.push(createCheckResult('F4', 'pass', [`Canonical URL found: ${parsed.canonical}`]));
+        results.push(createCheckResult('F4', 'pass', [
+          `Canonical URL found: ${parsed.canonical}`,
+          ...(escapedCanonicalTag ? [`HTML: ${escapedCanonicalTag}`] : [])
+        ]));
       } else {
-        results.push(createCheckResult('F4', 'fail', ['Canonical URL is not absolute']));
+        results.push(createCheckResult('F4', 'fail', [
+          'Canonical URL is not absolute',
+          ...(escapedCanonicalTag ? [`HTML: ${escapedCanonicalTag}`] : [])
+        ]));
       }
     } catch (error) {
-      results.push(createCheckResult('F4', 'fail', ['Canonical URL is invalid']));
+      results.push(createCheckResult('F4', 'fail', [
+        'Canonical URL is invalid',
+        ...(escapedCanonicalTag ? [`HTML: ${escapedCanonicalTag}`] : [])
+      ]));
     }
   } else {
     results.push(createCheckResult('F4', 'fail', ['No canonical URL found']));
   }
 
-  // F5: JS-render parity
+  // F5: JS-render parity (and get JS-rendered HTML for other checks)
+  let renderedData = null;
+  let renderedParsed = parsed;
   try {
-    const renderedData = await renderRemotely(rawData.finalUrl);
-    const renderedParsed = parseHTML(renderedData.html);
+    renderedData = await renderRemotely(rawData.finalUrl);
+    renderedParsed = parseHTML(renderedData.html);
     
     // Check H1 parity
     const h1Match = parsed.h1 === renderedParsed.h1;
@@ -269,17 +301,26 @@ async function runAllChecks(
   
   const foundOg = ogChecks.filter(check => check.value).length;
   
+  // Collect Open Graph meta tags for evidence
+  const ogTags = rawData.html.match(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi) || [];
+  const escapedOgTags = ogTags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  
   if (foundOg === 4) {
-    results.push(createCheckResult('M5', 'pass', ['All Open Graph tags found']));
+    results.push(createCheckResult('M5', 'pass', [
+      'All Open Graph tags found',
+      ...(escapedOgTags.length > 0 ? [`HTML: ${escapedOgTags.join(', ')}`] : [])
+    ]));
   } else if (foundOg >= 2) {
     results.push(createCheckResult('M5', 'partial', [
       `Found ${foundOg}/4 Open Graph tags`,
-      `Missing: ${ogChecks.filter(check => !check.value).map(check => check.prop).join(', ')}`
+      `Missing: ${ogChecks.filter(check => !check.value).map(check => check.prop).join(', ')}`,
+      ...(escapedOgTags.length > 0 ? [`HTML: ${escapedOgTags.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('M5', 'fail', [
       `Found ${foundOg}/4 Open Graph tags`,
-      `Missing: ${ogChecks.filter(check => !check.value).map(check => check.prop).join(', ')}`
+      `Missing: ${ogChecks.filter(check => !check.value).map(check => check.prop).join(', ')}`,
+      ...(escapedOgTags.length > 0 ? [`HTML: ${escapedOgTags.join(', ')}`] : [])
     ]));
   }
 
@@ -305,7 +346,7 @@ async function runAllChecks(
 
   // S1: Core Business Schema (Highest Weight)
   const businessTypes = ['LocalBusiness', 'Organization', 'Store', 'Restaurant', 'Hotel', 'MedicalBusiness', 'ProfessionalService', 'FinancialService', 'AutomotiveBusiness', 'EntertainmentBusiness'];
-  const hasBusinessSchema = parsed.jsonLd.some((item: any) => {
+  const businessSchemaItems = parsed.jsonLd.filter((item: any) => {
     const type = item['@type'];
     if (typeof type === 'string') {
       return businessTypes.some(businessType => type.includes(businessType));
@@ -316,9 +357,15 @@ async function runAllChecks(
     return false;
   });
   
-  if (hasBusinessSchema) {
+  // Collect schema examples for evidence
+  const schemaExamples = businessSchemaItems.slice(0, 2).map(item => 
+    JSON.stringify(item, null, 2).substring(0, 200) + '...'
+  );
+  
+  if (businessSchemaItems.length > 0) {
     results.push(createCheckResult('S1', 'pass', [
-      'Core business schema found'
+      'Core business schema found',
+      ...(schemaExamples.length > 0 ? [`Schema: ${schemaExamples.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('S1', 'fail', [
@@ -339,13 +386,20 @@ async function runAllChecks(
     return false;
   });
   
+  // Collect content schema examples for evidence
+  const contentSchemaExamples = foundContentTypes.slice(0, 2).map(item => 
+    JSON.stringify(item, null, 2).substring(0, 200) + '...'
+  );
+  
   if (foundContentTypes.length >= 2) {
     results.push(createCheckResult('S2', 'pass', [
-      `Found ${foundContentTypes.length} content enhancement schema types`
+      `Found ${foundContentTypes.length} content enhancement schema types`,
+      ...(contentSchemaExamples.length > 0 ? [`Schema: ${contentSchemaExamples.join(', ')}`] : [])
     ]));
   } else if (foundContentTypes.length === 1) {
     results.push(createCheckResult('S2', 'partial', [
-      `Found ${foundContentTypes.length} content enhancement schema type`
+      `Found ${foundContentTypes.length} content enhancement schema type`,
+      ...(contentSchemaExamples.length > 0 ? [`Schema: ${contentSchemaExamples.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('S2', 'fail', [
@@ -404,22 +458,28 @@ async function runAllChecks(
   }
 
   // C1: Single H1 with locality
+  const h1Tags = rawData.html.match(/<h1[^>]*>.*?<\/h1>/gi) || [];
+  const escapedH1Tags = h1Tags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  
   if (parsed.h1s.length === 1) {
     const hasLocality = facts.locality && parsed.h1.toLowerCase().includes(facts.locality.toLowerCase());
     if (hasLocality) {
       results.push(createCheckResult('C1', 'pass', [
-        `Single H1 found with locality: "${parsed.h1}"`
+        `Single H1 found with locality: "${parsed.h1}"`,
+        ...(escapedH1Tags.length > 0 ? [`HTML: ${escapedH1Tags[0]}`] : [])
       ]));
     } else {
       results.push(createCheckResult('C1', 'partial', [
-        `Single H1 found but no locality detected: "${parsed.h1}"`
+        `Single H1 found but no locality detected: "${parsed.h1}"`,
+        ...(escapedH1Tags.length > 0 ? [`HTML: ${escapedH1Tags[0]}`] : [])
       ]));
     }
   } else if (parsed.h1s.length === 0) {
     results.push(createCheckResult('C1', 'fail', ['No H1 found']));
   } else {
     results.push(createCheckResult('C1', 'fail', [
-      `Multiple H1s found (${parsed.h1s.length}): ${parsed.h1s.join(', ')}`
+      `Multiple H1s found (${parsed.h1s.length}): ${parsed.h1s.join(', ')}`,
+      ...(escapedH1Tags.length > 0 ? [`HTML: ${escapedH1Tags.join(', ')}`] : [])
     ]));
   }
 
@@ -601,18 +661,23 @@ async function runAllChecks(
     ]));
   }
 
-  // N2: Authoritative Profiles
-  const sameAsLinks = allSchemaItems.find((item: any) => item.sameAs)?.sameAs || [];
+  // N2: Social Profiles
+  const socialPlatforms = ['facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com', 'youtube.com', 'tiktok.com', 'pinterest.com', 'snapchat.com', 'whatsapp.com', 'telegram.org', 'discord.com', 'reddit.com', 'twitch.tv', 'github.com', 'medium.com', 'behance.net', 'dribbble.com', 'flickr.com', 'vimeo.com', 'soundcloud.com', 'spotify.com', 'apple.com/music', 'amazon.com/music', 'bandcamp.com', 'mixcloud.com', 'anchor.fm', 'clubhouse.com', 'mastodon.social', 'threads.net', 'bluesky.com'];
   
-  if (sameAsLinks.length >= 2) {
+  const sameAsLinks = allSchemaItems.find((item: any) => item.sameAs)?.sameAs || [];
+  const socialLinks = sameAsLinks.filter(link => 
+    socialPlatforms.some(platform => link.toLowerCase().includes(platform))
+  );
+  
+  if (socialLinks.length >= 2) {
     results.push(createCheckResult('N2', 'pass', [
-      `Found ${sameAsLinks.length} social profile links`,
-      `Links: ${sameAsLinks.slice(0, 3).join(', ')}`
+      `Found ${socialLinks.length} social profile links`,
+      `Links: ${socialLinks.slice(0, 3).join(', ')}`
     ]));
-  } else if (sameAsLinks.length === 1) {
+  } else if (socialLinks.length === 1) {
     results.push(createCheckResult('N2', 'partial', [
-      `Found ${sameAsLinks.length} social profile link`,
-      `Link: ${sameAsLinks[0]}`
+      `Found ${socialLinks.length} social profile link`,
+      `Link: ${socialLinks[0]}`
     ]));
   } else {
     results.push(createCheckResult('N2', 'fail', [
@@ -637,15 +702,7 @@ async function runAllChecks(
   }
 
   // N4: Brand Alt Text (use JS-rendered HTML for better accuracy)
-  let renderedHtml = rawData.html;
-  let renderedParsed = parsed;
-  try {
-    const renderedData = await renderRemotely(rawData.finalUrl);
-    renderedHtml = renderedData.html;
-    renderedParsed = parseHTML(renderedData.html);
-  } catch (error) {
-    // Fall back to raw HTML if JS rendering fails
-  }
+  const renderedHtml = renderedData ? renderedData.html : rawData.html;
   
   const imgTags = renderedHtml.match(/<img[^>]*>/gi) || [];
   const totalImages = imgTags.length;
@@ -695,7 +752,6 @@ async function runAllChecks(
   }
 
   // A1: Image Alt Text (use JS-rendered HTML for better accuracy)
-  
   const a1ImgTags = renderedHtml.match(/<img[^>]*>/gi) || [];
   const a1TotalImages = a1ImgTags.length;
   
@@ -738,21 +794,28 @@ async function runAllChecks(
   const labels = renderedParsed.mainText?.match(/<label[^>]*>/gi) || [];
   const inputs = renderedParsed.mainText?.match(/<input[^>]*>/gi) || [];
   
+  // Collect form elements for evidence
+  const formElements = [...forms, ...labels, ...inputs].slice(0, 3);
+  const escapedFormElements = formElements.map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  
   if (forms.length === 0) {
     results.push(createCheckResult('A2', 'pass', [
       'No forms found on page'
     ]));
   } else if (labels.length >= inputs.length * 0.8) {
     results.push(createCheckResult('A2', 'pass', [
-      `Good form structure: ${labels.length} labels for ${inputs.length} inputs`
+      `Good form structure: ${labels.length} labels for ${inputs.length} inputs`,
+      ...(escapedFormElements.length > 0 ? [`HTML: ${escapedFormElements.join(', ')}`] : [])
     ]));
   } else if (labels.length > 0) {
     results.push(createCheckResult('A2', 'partial', [
-      `Basic form structure: ${labels.length} labels for ${inputs.length} inputs`
+      `Basic form structure: ${labels.length} labels for ${inputs.length} inputs`,
+      ...(escapedFormElements.length > 0 ? [`HTML: ${escapedFormElements.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('A2', 'fail', [
-      `Poor form structure: ${labels.length} labels for ${inputs.length} inputs`
+      `Poor form structure: ${labels.length} labels for ${inputs.length} inputs`,
+      ...(escapedFormElements.length > 0 ? [`HTML: ${escapedFormElements.join(', ')}`] : [])
     ]));
   }
 
@@ -778,23 +841,33 @@ async function runAllChecks(
     link.text && link.text.length > 3 && !link.text.toLowerCase().includes('click here')
   );
   
+  // Collect navigation elements for evidence
+  const navElementsForEvidence = [...navElements, ...navListElements].slice(0, 3);
+  const escapedNavElements = navElementsForEvidence.map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  
   if (navElements.length > 0 && navListElements.length > 0) {
     results.push(createCheckResult('A4', 'pass', [
-      `Good navigation structure: ${navElements.length} nav elements, ${navListElements.length} lists`
+      `Good navigation structure: ${navElements.length} nav elements, ${navListElements.length} lists`,
+      ...(escapedNavElements.length > 0 ? [`HTML: ${escapedNavElements.join(', ')}`] : [])
     ]));
   } else if (descriptiveLinks.length > renderedParsed.links.length * 0.7) {
     results.push(createCheckResult('A4', 'partial', [
-      `Basic navigation: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`
+      `Basic navigation: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`,
+      ...(escapedNavElements.length > 0 ? [`HTML: ${escapedNavElements.join(', ')}`] : [])
     ]));
   } else {
     results.push(createCheckResult('A4', 'fail', [
-      `Poor navigation structure: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`
+      `Poor navigation structure: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`,
+      ...(escapedNavElements.length > 0 ? [`HTML: ${escapedNavElements.join(', ')}`] : [])
     ]));
   }
 
   // A5: Video Accessibility (use JS-rendered HTML)
   const videoTags = renderedHtml.match(/<video[^>]*>/gi) || [];
   const totalVideos = videoTags.length;
+  
+  // Collect video tags for evidence
+  const escapedVideoTags = videoTags.slice(0, 3).map(tag => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
   
   if (totalVideos === 0) {
     results.push(createCheckResult('A5', 'pass', [
@@ -827,17 +900,20 @@ async function runAllChecks(
     if (videosWithAccessibility === totalVideos) {
       results.push(createCheckResult('A5', 'pass', [
         `All ${totalVideos} videos have accessibility features`,
-        hasTranscripts ? 'Transcript links found' : 'Video tracks/captions found'
+        hasTranscripts ? 'Transcript links found' : 'Video tracks/captions found',
+        ...(escapedVideoTags.length > 0 ? [`HTML: ${escapedVideoTags.join(', ')}`] : [])
       ]));
     } else if (videosWithAccessibility > 0) {
       results.push(createCheckResult('A5', 'partial', [
         `${videosWithAccessibility}/${totalVideos} videos have accessibility features`,
-        hasTranscripts ? 'Some transcript links found' : 'Some video tracks found'
+        hasTranscripts ? 'Some transcript links found' : 'Some video tracks found',
+        ...(escapedVideoTags.length > 0 ? [`HTML: ${escapedVideoTags.join(', ')}`] : [])
       ]));
     } else {
       results.push(createCheckResult('A5', 'fail', [
         `${totalVideos} videos found but no accessibility features detected`,
-        'Add captions, transcripts, or descriptive text for video content'
+        'Add captions, transcripts, or descriptive text for video content',
+        ...(escapedVideoTags.length > 0 ? [`HTML: ${escapedVideoTags.join(', ')}`] : [])
       ]));
     }
   }

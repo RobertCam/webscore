@@ -10,6 +10,8 @@ export default function Home() {
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedCheck, setSelectedCheck] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerContent, setDrawerContent] = useState<'check' | 'rubric' | 'evidence'>('check');
   
   const allCategories = getAllCategoriesWithChecks();
 
@@ -97,6 +99,18 @@ export default function Home() {
 
           {/* URL Input */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Analyze URL</h2>
+             <button
+               onClick={() => {
+                 setDrawerContent('rubric');
+                 setDrawerOpen(true);
+               }}
+               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+             >
+               📊 View Rubric
+             </button>
+            </div>
             <div className="flex gap-4">
               <input
                 type="url"
@@ -195,10 +209,24 @@ export default function Home() {
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-gray-900">{checkName}</span>
                                     <button
-                                      onClick={() => setSelectedCheck(check.id)}
-                                      className="text-blue-500 hover:text-blue-700 text-xs"
+                                      onClick={() => {
+                                        setSelectedCheck(check.id);
+                                        setDrawerContent('check');
+                                        setDrawerOpen(true);
+                                      }}
+                                      className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                                     >
-                                      ℹ️
+                                      Info
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCheck(check.id);
+                                        setDrawerContent('evidence');
+                                        setDrawerOpen(true);
+                                      }}
+                                      className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                    >
+                                      Evidence
                                     </button>
                                   </div>
                                   <div className="text-xs text-gray-500">
@@ -263,50 +291,57 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Check Details Modal */}
-      {selectedCheck && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      {/* Right Side Drawer */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end pointer-events-none">
+          <div 
+            className="bg-white w-[500px] h-full shadow-xl border-l border-gray-200 overflow-y-auto pointer-events-auto"
+          >
             <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {getCheckInfo(selectedCheck)?.name || selectedCheck}
-                </h3>
+              <div className="flex justify-between items-start mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {drawerContent === 'check' 
+                        ? (getCheckInfo(selectedCheck)?.name || selectedCheck)
+                        : drawerContent === 'evidence'
+                        ? `Evidence: ${getCheckInfo(selectedCheck)?.name || selectedCheck}`
+                        : 'Scoring Rubric'
+                      }
+                    </h2>
                 <button
-                  onClick={() => setSelectedCheck(null)}
+                  onClick={() => setDrawerOpen(false)}
                   className="text-gray-400 hover:text-gray-600 text-2xl"
                 >
                   ×
                 </button>
               </div>
               
-              {(() => {
+              {drawerContent === 'check' && selectedCheck && (() => {
                 const checkInfo = getCheckInfo(selectedCheck);
                 if (!checkInfo) return null;
                 
                 return (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">What it checks:</h4>
-                      <p className="text-gray-700">{checkInfo.whatItChecks}</p>
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-blue-900 mb-2">What it checks</h3>
+                      <p className="text-blue-800">{checkInfo.whatItChecks}</p>
                     </div>
                     
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Why it matters:</h4>
-                      <p className="text-gray-700">{checkInfo.whyItMatters}</p>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-green-900 mb-2">Why it matters</h3>
+                      <p className="text-green-800">{checkInfo.whyItMatters}</p>
                     </div>
                     
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">How to pass:</h4>
-                      <p className="text-gray-700">{checkInfo.howToPass}</p>
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-yellow-900 mb-2">How to pass</h3>
+                      <p className="text-yellow-800">{checkInfo.howToPass}</p>
                     </div>
                     
                     {checkInfo.examples && checkInfo.examples.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Examples:</h4>
-                        <ul className="space-y-1">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-3">Examples</h3>
+                        <ul className="space-y-2">
                           {checkInfo.examples.map((example, idx) => (
-                            <li key={idx} className="text-gray-700 text-sm font-mono bg-gray-50 p-2 rounded">
+                            <li key={idx} className="text-gray-700 text-sm font-mono bg-white p-2 rounded border">
                               {example}
                             </li>
                           ))}
@@ -314,7 +349,7 @@ export default function Home() {
                       </div>
                     )}
                     
-                    <div className="pt-4 border-t">
+                    <div className="pt-4 border-t border-gray-200">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Category: {checkInfo.category}</span>
                         <span>Weight: {checkInfo.weight} points</span>
@@ -323,6 +358,138 @@ export default function Home() {
                   </div>
                 );
               })()}
+              
+              {drawerContent === 'evidence' && selectedCheck && (() => {
+                const checkInfo = getCheckInfo(selectedCheck);
+                const checkResult = scorecard?.categories
+                  .flatMap(cat => cat.checks)
+                  .find(check => check.id === selectedCheck);
+                
+                if (!checkInfo || !checkResult) return null;
+                
+                return (
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-blue-900 mb-2">Check Details</h3>
+                      <p className="text-blue-800">{checkInfo.description}</p>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <span className="font-medium">Status:</span> {checkResult.status} | 
+                        <span className="font-medium ml-2">Score:</span> {checkResult.score} points
+                      </div>
+                    </div>
+                    
+                    {checkResult.evidence && checkResult.evidence.length > 0 && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-3">Evidence</h3>
+                        <ul className="space-y-2">
+                          {checkResult.evidence.map((evidence, idx) => {
+                            const isHtml = evidence.includes('HTML:') || evidence.includes('Schema:');
+                            const isNegative = evidence.includes('❌') || 
+                                              evidence.includes('missing') || 
+                                              evidence.includes('No ') || 
+                                              evidence.includes('Poor') || 
+                                              evidence.includes('fail') || 
+                                              evidence.includes('not found') || 
+                                              evidence.includes('invalid') || 
+                                              evidence.includes('blocked') || 
+                                              evidence.includes('error') ||
+                                              evidence.includes('Only') ||
+                                              evidence.includes('None') ||
+                                              evidence.includes('Failed') ||
+                                              evidence.includes('Missing') ||
+                                              evidence.includes('Insufficient') ||
+                                              evidence.includes('Inadequate');
+                            const isPositive = evidence.includes('✅') || 
+                                              evidence.includes('found') || 
+                                              evidence.includes('All ') || 
+                                              evidence.includes('Good') || 
+                                              evidence.includes('pass') || 
+                                              evidence.includes('valid') || 
+                                              evidence.includes('matches') ||
+                                              evidence.includes('Complete') ||
+                                              evidence.includes('Success') ||
+                                              evidence.includes('Available') ||
+                                              evidence.includes('Present') ||
+                                              evidence.includes('Detected') ||
+                                              evidence.includes('Located');
+                            
+                            return (
+                              <li key={idx} className={`text-sm p-2 rounded border ${
+                                isHtml 
+                                  ? 'bg-gray-900 text-green-400 font-mono text-xs' 
+                                  : isNegative 
+                                    ? 'bg-red-50 text-red-800 border-red-200' 
+                                    : isPositive 
+                                      ? 'bg-green-50 text-green-800 border-green-200'
+                                      : 'bg-white text-gray-700'
+                              }`}>
+                                {isHtml ? (
+                                  <pre className="whitespace-pre-wrap overflow-x-auto">
+                                    {evidence.replace(/^(HTML:|Schema:)\s*/, '')}
+                                  </pre>
+                                ) : (
+                                  evidence
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Category: {checkInfo.category}</span>
+                        <span>Weight: {checkInfo.weight} points</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {drawerContent === 'rubric' && (
+                <div className="space-y-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-blue-900 mb-3">Scoring Overview</h3>
+                    <p className="text-blue-800 text-sm">
+                      The analyzer evaluates location pages across 7 categories with a total of 100 points.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Category Weights</h3>
+                    <div className="space-y-3">
+                      {[
+                        { name: 'Fetchability', weight: '20 pts', desc: 'Can bots access and index the page?' },
+                        { name: 'Metadata', weight: '20 pts', desc: 'Title, description, Open Graph tags' },
+                        { name: 'Schema', weight: '25 pts', desc: 'JSON-LD structured data' },
+                        { name: 'Semantic Content', weight: '15 pts', desc: 'Headings, content structure' },
+                        { name: 'Freshness', weight: '10 pts', desc: 'Recent updates, sitemap recency' },
+                        { name: 'Brand Clarity', weight: '13 pts', desc: 'Consistent branding across elements' },
+                        { name: 'Accessibility', weight: '13 pts', desc: 'Image alt text, forms, navigation, video accessibility' }
+                      ].map((category, idx) => (
+                        <div key={idx} className="bg-gray-50 p-3 rounded border">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-gray-900">{category.name}</div>
+                              <div className="text-sm text-gray-600">{category.desc}</div>
+                            </div>
+                            <span className="text-sm font-semibold text-blue-600">{category.weight}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-yellow-900 mb-2">Scoring Details</h3>
+                    <p className="text-yellow-800 text-sm">
+                      Each check has specific point values. Pass = full points, Partial = 50% points, Fail = 0 points.
+                      The final score is calculated as a percentage of total possible points.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
