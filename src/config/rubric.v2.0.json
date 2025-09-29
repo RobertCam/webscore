@@ -161,6 +161,43 @@
           "id": "N3",
           "label": "Logo in schema + visible",
           "weight": 3
+        },
+        {
+          "id": "N4",
+          "label": "Image alt text contains brand/location info",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "label": "Accessibility",
+      "nominal_weight": 10,
+      "checks": [
+        {
+          "id": "A1",
+          "label": "Images have descriptive alt text",
+          "weight": 3
+        },
+        {
+          "id": "A2",
+          "label": "Form labels and structure",
+          "weight": 2
+        },
+        {
+          "id": "A3",
+          "label": "Color contrast and text readability",
+          "weight": 2
+        },
+        {
+          "id": "A4",
+          "label": "Navigation and link structure",
+          "weight": 2
+        },
+        {
+          "id": "A5",
+          "label": "Video accessibility (captions, transcripts)",
+          "weight": 3
         }
       ]
     }

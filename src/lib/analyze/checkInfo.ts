@@ -304,6 +304,79 @@ export const CHECK_INFO: Record<string, CheckInfo> = {
     whyItMatters: 'Visible logos help with brand recognition and provide visual context for AI systems',
     howToPass: 'Include logo in schema and ensure it\'s visible on the page',
     examples: ['✅ Logo in schema + <img src="logo.png" alt="Business Name">', '❌ Logo only in schema or not visible']
+  },
+
+  N4: {
+    id: 'N4',
+    name: 'Brand Alt Text',
+    category: 'Brand Clarity',
+    weight: 3,
+    description: 'Image alt text contains brand/location info',
+    whatItChecks: 'Analyzes image alt text to see if it contains brand names, business names, or location information',
+    whyItMatters: 'Alt text with brand/location info helps reinforce brand identity and local SEO, making images more valuable for search and accessibility',
+    howToPass: 'Include business name, brand, or location in image alt text, especially for storefronts, products, or location-specific images',
+    examples: ['✅ <img src="store.jpg" alt="Foot Locker storefront on Main Street">', '❌ <img src="store.jpg" alt="Store front">']
+  },
+
+  // Accessibility Checks
+  A1: {
+    id: 'A1',
+    name: 'Image Alt Text',
+    category: 'Accessibility',
+    weight: 3,
+    description: 'Images have descriptive alt text',
+    whatItChecks: 'Verifies images have meaningful alt attributes that describe the image content',
+    whyItMatters: 'Alt text helps screen readers and AI systems understand image content, improving accessibility and searchability',
+    howToPass: 'Add descriptive alt text to all images, especially those containing important information',
+    examples: ['✅ <img src="store.jpg" alt="Foot Locker storefront on Main Street">', '❌ <img src="store.jpg" alt=""> or missing alt']
+  },
+
+  A2: {
+    id: 'A2',
+    name: 'Form Structure',
+    category: 'Accessibility',
+    weight: 2,
+    description: 'Form labels and structure',
+    whatItChecks: 'Looks for proper form labels, fieldset elements, and structured form markup',
+    whyItMatters: 'Well-structured forms are easier for assistive technologies and AI systems to understand and process',
+    howToPass: 'Use proper label elements, fieldsets for grouping, and semantic form structure',
+    examples: ['✅ <label for="email">Email:</label><input id="email">', '❌ <input placeholder="Email"> without label']
+  },
+
+  A3: {
+    id: 'A3',
+    name: 'Text Readability',
+    category: 'Accessibility',
+    weight: 2,
+    description: 'Color contrast and text readability',
+    whatItChecks: 'Analyzes text color contrast ratios and font sizes for readability',
+    whyItMatters: 'Good contrast and readable text help both users and AI systems extract information more effectively',
+    howToPass: 'Ensure sufficient color contrast (4.5:1 for normal text) and readable font sizes',
+    examples: ['✅ Dark text on light background, 16px+ font size', '❌ Light gray text on white background']
+  },
+
+  A4: {
+    id: 'A4',
+    name: 'Navigation Structure',
+    category: 'Accessibility',
+    weight: 2,
+    description: 'Navigation and link structure',
+    whatItChecks: 'Looks for proper navigation markup, link text, and site structure',
+    whyItMatters: 'Clear navigation helps users and AI systems understand site structure and find relevant content',
+    howToPass: 'Use semantic navigation elements, descriptive link text, and logical site hierarchy',
+    examples: ['✅ <nav><ul><li><a href="/about">About Us</a></li></ul></nav>', '❌ <div><a href="/about">Click here</a></div>']
+  },
+
+  A5: {
+    id: 'A5',
+    name: 'Video Accessibility',
+    category: 'Accessibility',
+    weight: 3,
+    description: 'Video accessibility (captions, transcripts)',
+    whatItChecks: 'Looks for video elements and checks for captions, transcripts, or other accessibility features',
+    whyItMatters: 'Videos without captions or transcripts are inaccessible to deaf/hard-of-hearing users and provide no text content for AI systems to index',
+    howToPass: 'Add captions, transcripts, or descriptive text for video content. Use proper video markup with accessibility attributes',
+    examples: ['✅ <video><track kind="captions" src="captions.vtt">', '✅ Video with transcript link', '❌ <video> without captions or transcripts']
   }
 };
 

@@ -39,14 +39,15 @@ export async function POST(request: NextRequest) {
     const checkResults = await runAllChecks(rawData, parsed, facts);
     
     // Compute category scores
-    const categoryResults = [
-      computeCategoryScore('fetchability', checkResults),
-      computeCategoryScore('metadata', checkResults),
-      computeCategoryScore('schema', checkResults),
-      computeCategoryScore('semantics', checkResults),
-      computeCategoryScore('freshness', checkResults),
-      computeCategoryScore('brand', checkResults),
-    ];
+  const categoryResults = [
+    computeCategoryScore('fetchability', checkResults),
+    computeCategoryScore('metadata', checkResults),
+    computeCategoryScore('schema', checkResults),
+    computeCategoryScore('semantics', checkResults),
+    computeCategoryScore('freshness', checkResults),
+    computeCategoryScore('brand', checkResults),
+    computeCategoryScore('accessibility', checkResults),
+  ];
     
     // Compute total score
     const totalScore = computeTotalScore(categoryResults);
@@ -149,21 +150,36 @@ async function runAllChecks(
     const h1Match = parsed.h1 === renderedParsed.h1;
     const textSimilarity = calculateTextSimilarity(parsed.mainText || '', renderedParsed.mainText || '');
     
-    if (h1Match && textSimilarity > 0.8) {
+    // Check for significant content differences
+    const rawImages = rawData.html.match(/<img[^>]*>/gi) || [];
+    const renderedImages = renderedData.html.match(/<img[^>]*>/gi) || [];
+    const imageDiff = Math.abs(rawImages.length - renderedImages.length);
+    
+    const linkDiff = Math.abs(parsed.links.length - renderedParsed.links.length);
+    const hasSignificantDifferences = imageDiff > 2 || linkDiff > 5;
+    
+    if (h1Match && textSimilarity > 0.8 && !hasSignificantDifferences) {
       results.push(createCheckResult('F5', 'pass', [
         'H1 matches between raw and rendered HTML',
-        `Text similarity: ${Math.round(textSimilarity * 100)}%`
+        `Text similarity: ${Math.round(textSimilarity * 100)}%`,
+        `Images: ${rawImages.length} raw, ${renderedImages.length} rendered`,
+        `Links: ${parsed.links.length} raw, ${renderedParsed.links.length} rendered`
       ]));
-    } else if (h1Match || textSimilarity > 0.6) {
+    } else if ((h1Match && textSimilarity > 0.6) || !hasSignificantDifferences) {
       results.push(createCheckResult('F5', 'partial', [
         h1Match ? 'H1 matches' : 'H1 differs',
-        `Text similarity: ${Math.round(textSimilarity * 100)}%`
+        `Text similarity: ${Math.round(textSimilarity * 100)}%`,
+        `Images: ${rawImages.length} raw, ${renderedImages.length} rendered`,
+        `Links: ${parsed.links.length} raw, ${renderedParsed.links.length} rendered`
       ]));
     } else {
       results.push(createCheckResult('F5', 'fail', [
-        'H1 differs between raw and rendered HTML',
-        `Text similarity: ${Math.round(textSimilarity * 100)}%`
-      ]));
+        h1Match ? 'H1 matches' : 'H1 differs',
+        `Text similarity: ${Math.round(textSimilarity * 100)}%`,
+        `Images: ${rawImages.length} raw, ${renderedImages.length} rendered`,
+        `Links: ${parsed.links.length} raw, ${renderedParsed.links.length} rendered`,
+        hasSignificantDifferences ? 'Significant content differences detected' : ''
+      ].filter(Boolean)));
     }
   } catch (error) {
     results.push(createCheckResult('F5', 'fail', [
@@ -608,6 +624,200 @@ async function runAllChecks(
     results.push(createCheckResult('N3', 'fail', [
       'No logo found visible on page'
     ]));
+  }
+
+  // N4: Brand Alt Text (use JS-rendered HTML for better accuracy)
+  let renderedHtml = rawData.html;
+  let renderedParsed = parsed;
+  try {
+    const renderedData = await renderRemotely(rawData.finalUrl);
+    renderedHtml = renderedData.html;
+    renderedParsed = parseHTML(renderedData.html);
+  } catch (error) {
+    // Fall back to raw HTML if JS rendering fails
+  }
+  
+  const imgTags = renderedHtml.match(/<img[^>]*>/gi) || [];
+  const totalImages = imgTags.length;
+  
+  if (totalImages === 0) {
+    results.push(createCheckResult('N4', 'pass', [
+      'No images found on page'
+    ]));
+  } else {
+    let imagesWithBrandInfo = 0;
+    const brandKeywords = ['store', 'shop', 'location', 'address', 'street', 'avenue', 'road', 'center', 'centre', 'mall', 'plaza'];
+    
+    imgTags.forEach(imgTag => {
+      const altMatch = imgTag.match(/alt\s*=\s*["']([^"']*)["']/i) || 
+                      imgTag.match(/alt\s*=\s*([^\s>]+)/i);
+      if (altMatch && altMatch[1]) {
+        const altText = altMatch[1].toLowerCase();
+        // Check for brand/location keywords or business name patterns
+        const hasBrandInfo = brandKeywords.some(keyword => altText.includes(keyword)) ||
+                           altText.length > 20; // Longer alt text likely contains more descriptive info
+        if (hasBrandInfo) {
+          imagesWithBrandInfo++;
+        }
+      }
+    });
+    
+    if (imagesWithBrandInfo === totalImages) {
+      results.push(createCheckResult('N4', 'pass', [
+        `All ${totalImages} images have brand/location info in alt text`
+      ]));
+    } else if (imagesWithBrandInfo > totalImages * 0.5) {
+      results.push(createCheckResult('N4', 'partial', [
+        `${imagesWithBrandInfo}/${totalImages} images have brand/location info in alt text`
+      ]));
+    } else {
+      results.push(createCheckResult('N4', 'fail', [
+        `Only ${imagesWithBrandInfo}/${totalImages} images have brand/location info in alt text`,
+        'Include business name, brand, or location in image alt text'
+      ]));
+    }
+  }
+
+  // A1: Image Alt Text (use JS-rendered HTML for better accuracy)
+  
+  const a1ImgTags = renderedHtml.match(/<img[^>]*>/gi) || [];
+  const a1TotalImages = a1ImgTags.length;
+  
+  let a1ImagesWithAlt = 0;
+  a1ImgTags.forEach(imgTag => {
+    // Check for alt attribute with various formats
+    const altMatch = imgTag.match(/alt\s*=\s*["']([^"']*)["']/i) || 
+                    imgTag.match(/alt\s*=\s*([^\s>]+)/i);
+    if (altMatch && altMatch[1] && altMatch[1].trim().length > 0) {
+      a1ImagesWithAlt++;
+    }
+  });
+  
+  if (a1TotalImages === 0) {
+    results.push(createCheckResult('A1', 'pass', [
+      'No images found on page'
+    ]));
+  } else if (a1ImagesWithAlt === a1TotalImages) {
+    results.push(createCheckResult('A1', 'pass', [
+      `All ${a1TotalImages} images have alt text`
+    ]));
+  } else if (a1ImagesWithAlt > a1TotalImages * 0.5) {
+    results.push(createCheckResult('A1', 'partial', [
+      `${a1ImagesWithAlt}/${a1TotalImages} images have alt text`
+    ]));
+  } else {
+    results.push(createCheckResult('A1', 'fail', [
+      `Only ${a1ImagesWithAlt}/${a1TotalImages} images have alt text`
+    ]));
+  }
+
+  // A2: Form Structure (use JS-rendered HTML)
+  const forms = renderedParsed.mainText?.match(/<form[^>]*>/gi) || [];
+  const labels = renderedParsed.mainText?.match(/<label[^>]*>/gi) || [];
+  const inputs = renderedParsed.mainText?.match(/<input[^>]*>/gi) || [];
+  
+  if (forms.length === 0) {
+    results.push(createCheckResult('A2', 'pass', [
+      'No forms found on page'
+    ]));
+  } else if (labels.length >= inputs.length * 0.8) {
+    results.push(createCheckResult('A2', 'pass', [
+      `Good form structure: ${labels.length} labels for ${inputs.length} inputs`
+    ]));
+  } else if (labels.length > 0) {
+    results.push(createCheckResult('A2', 'partial', [
+      `Basic form structure: ${labels.length} labels for ${inputs.length} inputs`
+    ]));
+  } else {
+    results.push(createCheckResult('A2', 'fail', [
+      `Poor form structure: ${labels.length} labels for ${inputs.length} inputs`
+    ]));
+  }
+
+  // A3: Text Readability (use JS-rendered HTML)
+  const textContent = renderedParsed.mainText?.replace(/<[^>]*>/g, '') || '';
+  const textWordCount = textContent.split(/\s+/).length;
+  const hasReadableContent = textWordCount > 100;
+  
+  if (hasReadableContent) {
+    results.push(createCheckResult('A3', 'pass', [
+      `Page has substantial text content (${textWordCount} words)`
+    ]));
+  } else {
+    results.push(createCheckResult('A3', 'fail', [
+      `Page has minimal text content (${textWordCount} words)`
+    ]));
+  }
+
+  // A4: Navigation Structure (use JS-rendered HTML)
+  const navElements = renderedParsed.mainText?.match(/<nav[^>]*>/gi) || [];
+  const navListElements = renderedParsed.mainText?.match(/<ul[^>]*>|<ol[^>]*>/gi) || [];
+  const descriptiveLinks = renderedParsed.links.filter(link =>
+    link.text && link.text.length > 3 && !link.text.toLowerCase().includes('click here')
+  );
+  
+  if (navElements.length > 0 && navListElements.length > 0) {
+    results.push(createCheckResult('A4', 'pass', [
+      `Good navigation structure: ${navElements.length} nav elements, ${navListElements.length} lists`
+    ]));
+  } else if (descriptiveLinks.length > renderedParsed.links.length * 0.7) {
+    results.push(createCheckResult('A4', 'partial', [
+      `Basic navigation: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`
+    ]));
+  } else {
+    results.push(createCheckResult('A4', 'fail', [
+      `Poor navigation structure: ${descriptiveLinks.length}/${renderedParsed.links.length} descriptive links`
+    ]));
+  }
+
+  // A5: Video Accessibility (use JS-rendered HTML)
+  const videoTags = renderedHtml.match(/<video[^>]*>/gi) || [];
+  const totalVideos = videoTags.length;
+  
+  if (totalVideos === 0) {
+    results.push(createCheckResult('A5', 'pass', [
+      'No videos found on page'
+    ]));
+  } else {
+    let videosWithAccessibility = 0;
+    let hasTranscripts = false;
+    
+    videoTags.forEach(videoTag => {
+      // Check for captions/tracks
+      const hasTracks = videoTag.includes('<track') || videoTag.includes('kind="captions"') || videoTag.includes('kind="subtitles"');
+      if (hasTracks) {
+        videosWithAccessibility++;
+      }
+    });
+    
+    // Check for transcript links near videos
+    const transcriptKeywords = ['transcript', 'captions', 'subtitles', 'closed caption'];
+    const hasTranscriptLinks = transcriptKeywords.some(keyword => 
+      renderedHtml.toLowerCase().includes(keyword) && 
+      renderedHtml.toLowerCase().includes('video')
+    );
+    
+    if (hasTranscriptLinks) {
+      hasTranscripts = true;
+      videosWithAccessibility = Math.max(videosWithAccessibility, 1);
+    }
+    
+    if (videosWithAccessibility === totalVideos) {
+      results.push(createCheckResult('A5', 'pass', [
+        `All ${totalVideos} videos have accessibility features`,
+        hasTranscripts ? 'Transcript links found' : 'Video tracks/captions found'
+      ]));
+    } else if (videosWithAccessibility > 0) {
+      results.push(createCheckResult('A5', 'partial', [
+        `${videosWithAccessibility}/${totalVideos} videos have accessibility features`,
+        hasTranscripts ? 'Some transcript links found' : 'Some video tracks found'
+      ]));
+    } else {
+      results.push(createCheckResult('A5', 'fail', [
+        `${totalVideos} videos found but no accessibility features detected`,
+        'Add captions, transcripts, or descriptive text for video content'
+      ]));
+    }
   }
 
   return results;
