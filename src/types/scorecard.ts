@@ -64,6 +64,18 @@ export interface AnalyzeResponse {
   error?: string;
 }
 
+// Score-only API types for external services
+export interface ScoreRequest {
+  url: string;
+}
+
+export interface ScoreResponse {
+  success: boolean;
+  scorecard?: Scorecard;
+  duration_ms?: number;
+  error?: string;
+}
+
 // Fact detection types
 export interface DetectedFacts {
   brand?: string;
