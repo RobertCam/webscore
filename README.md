@@ -37,12 +37,6 @@ A lean, deterministic analyzer that scores a URL (0–100) for AI‑search/LLM i
 - **HTML Parsing:** Cheerio, @mozilla/readability
 - **Scoring:** Deterministic checks based on rubric v2.0
 
-## Phases
-
-- **Phase 0:** Skeleton & UI
-- **Phase 1:** MVP (F1, F2, F5, M1, M4, S1, S2 subset, C1, N1)
-- **Phase 2:** Core completeness
-- **Phase 3:** Polish & DX
 
 ## Scoring Categories
 

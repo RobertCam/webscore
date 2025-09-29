@@ -149,50 +149,50 @@ export const CHECK_INFO: Record<string, CheckInfo> = {
   // Schema Checks
   S1: {
     id: 'S1',
-    name: 'Valid JSON-LD',
+    name: 'Core Business Schema',
     category: 'Schema',
-    weight: 5,
-    description: 'Page contains valid JSON-LD structured data',
-    whatItChecks: 'Looks for valid JSON-LD script tags that can be parsed',
-    whyItMatters: 'JSON-LD provides structured information that AI systems can easily understand and use',
-    howToPass: 'Add valid JSON-LD script tags with proper syntax',
-    examples: ['✅ <script type="application/ld+json">{"@type":"LocalBusiness"...}</script>', '❌ Invalid JSON syntax']
+    weight: 8,
+    description: 'Essential business schema (LocalBusiness, Organization, Store, etc.)',
+    whatItChecks: 'Looks for any core business-related schema types that identify the business',
+    whyItMatters: 'Core business schema is the most important for AI systems to understand what type of business this is',
+    howToPass: 'Add LocalBusiness, Organization, Store, Restaurant, or similar business schema',
+    examples: ['✅ LocalBusiness, Organization, Store schema', '❌ No business schema found']
   },
   
   S2: {
     id: 'S2',
-    name: 'LocalBusiness Schema',
+    name: 'Content Enhancement Schema',
     category: 'Schema',
-    weight: 10,
-    description: 'Complete LocalBusiness structured data with essential fields',
-    whatItChecks: 'Verifies LocalBusiness schema includes name, url, telephone, address, geo coordinates, and hours',
-    whyItMatters: 'LocalBusiness schema provides rich, structured data about your business that AI systems can use for location-based queries',
-    howToPass: 'Include all essential LocalBusiness fields in your JSON-LD',
-    examples: ['✅ Complete address, phone, hours, and coordinates', '❌ Missing telephone or address fields']
+    weight: 6,
+    description: 'Content-related schema (FAQ, Product, Service, Offer, etc.)',
+    whatItChecks: 'Looks for schema types that enhance content understanding like FAQ, Product, Service, Offer, Event',
+    whyItMatters: 'Content enhancement schema helps AI systems better understand your services, products, and offerings',
+    howToPass: 'Add FAQ, Product, Service, Offer, Event, or similar content schema',
+    examples: ['✅ FAQ + Product + Service schema', '❌ No content enhancement schema']
   },
   
   S3: {
     id: 'S3',
-    name: 'Organization Schema',
+    name: 'Contact Information Schema',
     category: 'Schema',
-    weight: 7,
-    description: 'Supporting Organization, WebSite, and WebPage schema',
-    whatItChecks: 'Looks for Organization, WebSite, and WebPage schema types that complement LocalBusiness',
-    whyItMatters: 'Additional schema types provide more context about your business and website structure',
-    howToPass: 'Add Organization, WebSite, and WebPage schema alongside LocalBusiness',
-    examples: ['✅ Organization schema with logo and sameAs links', '❌ Only LocalBusiness, no Organization context']
+    weight: 6,
+    description: 'Contact details in schema (address, phone, hours, etc.)',
+    whatItChecks: 'Looks for contact information fields like address, telephone, email, openingHours, geo, url',
+    whyItMatters: 'Contact information in schema helps AI systems provide accurate location and contact details',
+    howToPass: 'Include address, phone, hours, email, or location data in your schema',
+    examples: ['✅ Address + phone + hours + geo', '❌ No contact information in schema']
   },
   
   S4: {
     id: 'S4',
-    name: 'Content Freshness',
+    name: 'Rich Content Schema',
     category: 'Schema',
-    weight: 3,
-    description: 'Meaningful dateModified in schema or visible content',
-    whatItChecks: 'Looks for dateModified fields in schema or visible date information',
-    whyItMatters: 'Fresh content signals to AI systems that the information is current and relevant',
-    howToPass: 'Include dateModified in schema or show visible update dates',
-    examples: ['✅ "Last updated: March 2024" or schema dateModified', '❌ No date information anywhere']
+    weight: 4,
+    description: 'Rich content schema (Review, Rating, Image, Video, etc.)',
+    whatItChecks: 'Looks for rich content types like Review, Rating, ImageObject, VideoObject, BreadcrumbList',
+    whyItMatters: 'Rich content schema enhances AI understanding of content quality and user experience',
+    howToPass: 'Add Review, Rating, ImageObject, VideoObject, or navigation schema',
+    examples: ['✅ Review + Rating + ImageObject', '❌ No rich content schema']
   },
   
   // Semantic Content Checks

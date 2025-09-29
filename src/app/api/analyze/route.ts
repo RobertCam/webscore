@@ -277,94 +277,104 @@ async function runAllChecks(
     results.push(createCheckResult('M6', 'fail', ['No canonical URL to compare']));
   }
 
-  // S1: Valid JSON-LD parses
-  if (parsed.jsonLd.length > 0) {
+  // S1: Core Business Schema (Highest Weight)
+  const businessTypes = ['LocalBusiness', 'Organization', 'Store', 'Restaurant', 'Hotel', 'MedicalBusiness', 'ProfessionalService', 'FinancialService', 'AutomotiveBusiness', 'EntertainmentBusiness'];
+  const hasBusinessSchema = parsed.jsonLd.some((item: any) => {
+    const type = item['@type'];
+    if (typeof type === 'string') {
+      return businessTypes.some(businessType => type.includes(businessType));
+    }
+    if (Array.isArray(type)) {
+      return type.some(t => businessTypes.some(businessType => t.includes(businessType)));
+    }
+    return false;
+  });
+  
+  if (hasBusinessSchema) {
     results.push(createCheckResult('S1', 'pass', [
-      `Found ${parsed.jsonLd.length} valid JSON-LD block(s)`
+      'Core business schema found'
     ]));
   } else {
-    results.push(createCheckResult('S1', 'fail', ['No valid JSON-LD found']));
+    results.push(createCheckResult('S1', 'fail', [
+      'No core business schema found'
+    ]));
   }
 
-  // S2: LocalBusiness essentials
-  const localBusiness = parsed.jsonLd.find((item: any) => 
-    item['@type'] === 'LocalBusiness' || 
-    (Array.isArray(item['@type']) && item['@type'].includes('LocalBusiness'))
-  );
-  
-  if (localBusiness) {
-    const essentials = ['name', 'url', 'telephone', 'address'];
-    const foundEssentials = essentials.filter(prop => localBusiness[prop]);
-    
-    if (foundEssentials.length >= 3) {
-      results.push(createCheckResult('S2', 'pass', [
-        `LocalBusiness schema found with ${foundEssentials.length}/4 essentials`,
-        `Found: ${foundEssentials.join(', ')}`
-      ]));
-    } else {
-      results.push(createCheckResult('S2', 'partial', [
-        `LocalBusiness schema found with ${foundEssentials.length}/4 essentials`,
-        `Found: ${foundEssentials.join(', ') || 'none'}`
-      ]));
+  // S2: Content Enhancement Schema (Medium Weight)
+  const contentTypes = ['FAQ', 'Product', 'Service', 'Offer', 'Event', 'Article', 'BlogPosting', 'HowTo', 'Recipe', 'Review'];
+  const foundContentTypes = parsed.jsonLd.filter((item: any) => {
+    const type = item['@type'];
+    if (typeof type === 'string') {
+      return contentTypes.some(contentType => type.includes(contentType));
     }
+    if (Array.isArray(type)) {
+      return type.some(t => contentTypes.some(contentType => t.includes(contentType)));
+    }
+    return false;
+  });
+  
+  if (foundContentTypes.length >= 2) {
+    results.push(createCheckResult('S2', 'pass', [
+      `Found ${foundContentTypes.length} content enhancement schema types`
+    ]));
+  } else if (foundContentTypes.length === 1) {
+    results.push(createCheckResult('S2', 'partial', [
+      `Found ${foundContentTypes.length} content enhancement schema type`
+    ]));
   } else {
-    results.push(createCheckResult('S2', 'fail', ['No LocalBusiness schema found']));
+    results.push(createCheckResult('S2', 'fail', [
+      'No content enhancement schema found'
+    ]));
   }
 
-  // S3: Organization/WebSite/WebPage schema
-  const orgSchema = parsed.jsonLd.find((item: any) => 
-    item['@type'] === 'Organization' || 
-    (Array.isArray(item['@type']) && item['@type'].includes('Organization'))
-  );
-  const websiteSchema = parsed.jsonLd.find((item: any) => 
-    item['@type'] === 'WebSite' || 
-    (Array.isArray(item['@type']) && item['@type'].includes('WebSite'))
-  );
-  const webpageSchema = parsed.jsonLd.find((item: any) => 
-    item['@type'] === 'WebPage' || 
-    (Array.isArray(item['@type']) && item['@type'].includes('WebPage'))
+  // S3: Contact Information Schema (Medium Weight)
+  const contactFields = ['address', 'telephone', 'email', 'openingHours', 'contactPoint', 'geo', 'url'];
+  const allSchemaItems = parsed.jsonLd.flat();
+  const foundContactFields = contactFields.filter(field => 
+    allSchemaItems.some((item: any) => item[field])
   );
   
-  const schemaCount = [orgSchema, websiteSchema, webpageSchema].filter(Boolean).length;
-  
-  if (schemaCount >= 2) {
+  if (foundContactFields.length >= 3) {
     results.push(createCheckResult('S3', 'pass', [
-      `Found ${schemaCount}/3 supporting schema types`,
-      `Found: ${[orgSchema && 'Organization', websiteSchema && 'WebSite', webpageSchema && 'WebPage'].filter(Boolean).join(', ')}`
+      `Found ${foundContactFields.length}/7 contact information fields`,
+      `Found: ${foundContactFields.join(', ')}`
     ]));
-  } else if (schemaCount === 1) {
+  } else if (foundContactFields.length >= 1) {
     results.push(createCheckResult('S3', 'partial', [
-      `Found ${schemaCount}/3 supporting schema types`,
-      `Found: ${[orgSchema && 'Organization', websiteSchema && 'WebSite', webpageSchema && 'WebPage'].filter(Boolean).join(', ')}`
+      `Found ${foundContactFields.length}/7 contact information fields`,
+      `Found: ${foundContactFields.join(', ')}`
     ]));
   } else {
-    results.push(createCheckResult('S3', 'fail', ['No supporting schema types found']));
+    results.push(createCheckResult('S3', 'fail', [
+      'No contact information found in schema'
+    ]));
   }
 
-  // S4: Content Freshness
-  const dateModified = localBusiness?.dateModified || orgSchema?.dateModified;
-  if (dateModified) {
-    try {
-      const modifiedDate = new Date(dateModified);
-      const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysDiff <= 180) {
-        results.push(createCheckResult('S4', 'pass', [
-          `Content modified ${daysDiff} days ago`,
-          `Date: ${dateModified}`
-        ]));
-      } else {
-        results.push(createCheckResult('S4', 'fail', [
-          `Content modified ${daysDiff} days ago (older than 180 days)`,
-          `Date: ${dateModified}`
-        ]));
-      }
-    } catch (error) {
-      results.push(createCheckResult('S4', 'fail', ['Invalid dateModified format']));
+  // S4: Rich Content Schema (Lower Weight)
+  const richContentTypes = ['Review', 'Rating', 'ImageObject', 'VideoObject', 'AudioObject', 'MediaObject', 'BreadcrumbList', 'SiteNavigationElement'];
+  const foundRichContent = parsed.jsonLd.filter((item: any) => {
+    const type = item['@type'];
+    if (typeof type === 'string') {
+      return richContentTypes.some(richType => type.includes(richType));
     }
+    if (Array.isArray(type)) {
+      return type.some(t => richContentTypes.some(richType => t.includes(richType)));
+    }
+    return false;
+  });
+  
+  if (foundRichContent.length >= 2) {
+    results.push(createCheckResult('S4', 'pass', [
+      `Found ${foundRichContent.length} rich content schema types`
+    ]));
+  } else if (foundRichContent.length === 1) {
+    results.push(createCheckResult('S4', 'partial', [
+      `Found ${foundRichContent.length} rich content schema type`
+    ]));
   } else {
-    results.push(createCheckResult('S4', 'fail', ['No dateModified found in schema']));
+    results.push(createCheckResult('S4', 'fail', [
+      'No rich content schema found'
+    ]));
   }
 
   // C1: Single H1 with locality
@@ -471,25 +481,36 @@ async function runAllChecks(
     results.push(createCheckResult('R1', 'pass', [
       `Found visible date information: ${visibleDates[0]}`
     ]));
-  } else if (dateModified) {
-    // Already checked in S4
-    const modifiedDate = new Date(dateModified);
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24));
+  } else {
+    // Check for dateModified in any schema
+    const allSchemaItems = parsed.jsonLd.flat();
+    const dateModified = allSchemaItems.find((item: any) => item.dateModified)?.dateModified;
     
-    if (daysDiff <= 180) {
-      results.push(createCheckResult('R1', 'pass', [
-        `Schema shows recent update: ${daysDiff} days ago`
-      ]));
+    if (dateModified) {
+      try {
+        const modifiedDate = new Date(dateModified);
+        const now = new Date();
+        const daysDiff = Math.floor((now.getTime() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff <= 180) {
+          results.push(createCheckResult('R1', 'pass', [
+            `Schema shows recent update: ${daysDiff} days ago`
+          ]));
+        } else {
+          results.push(createCheckResult('R1', 'fail', [
+            `Schema shows old update: ${daysDiff} days ago`
+          ]));
+        }
+      } catch (error) {
+        results.push(createCheckResult('R1', 'fail', [
+          'Invalid dateModified format in schema'
+        ]));
+      }
     } else {
       results.push(createCheckResult('R1', 'fail', [
-        `Schema shows old update: ${daysDiff} days ago`
+        'No visible or schema date information found'
       ]));
     }
-  } else {
-    results.push(createCheckResult('R1', 'fail', [
-      'No visible or schema date information found'
-    ]));
   }
 
   // R2: Sitemap Freshness
@@ -534,7 +555,8 @@ async function runAllChecks(
   }
 
   // N1: Brand consistent
-  const brandSources = [parsed.title, parsed.h1, localBusiness?.name].filter(Boolean);
+  const schemaName = allSchemaItems.find((item: any) => item.name)?.name;
+  const brandSources = [parsed.title, parsed.h1, schemaName].filter(Boolean);
   const brandConsistency = brandSources.every(source => 
     source && facts.brand && source.toLowerCase().includes(facts.brand.toLowerCase())
   );
@@ -554,7 +576,7 @@ async function runAllChecks(
   }
 
   // N2: Authoritative Profiles
-  const sameAsLinks = localBusiness?.sameAs || orgSchema?.sameAs || [];
+  const sameAsLinks = allSchemaItems.find((item: any) => item.sameAs)?.sameAs || [];
   
   if (sameAsLinks.length >= 2) {
     results.push(createCheckResult('N2', 'pass', [
