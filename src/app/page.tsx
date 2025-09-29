@@ -72,10 +72,9 @@ export default function Home() {
       setScorecard(data.scorecard!);
       setAiInsights(data.ai_insights as AIInsights || null);
       
-      // Switch to AI tab if AI insights are available
-      if (data.ai_insights) {
-        setActiveTab('ai');
-      }
+      // Keep on Score Analysis tab - AI will appear when ready
+      // Only switch to AI tab if explicitly requested
+      setActiveTab('score');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
@@ -315,43 +314,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Evidence Details */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Evidence Details</h3>
-                <div className="space-y-4">
-                  {scorecard.categories.map((category) => (
-                    <div key={category.id}>
-                      <h4 className="font-medium text-gray-900 mb-2">{category.label}</h4>
-                      <div className="space-y-2">
-                        {category.checks.map((check) => {
-                          const checkInfo = getCheckInfo(check.id);
-                          const checkName = checkInfo?.name || check.id;
-                          return (
-                            <div key={check.id} className="border-l-4 border-gray-200 pl-4 mb-3 p-3 bg-gray-50 rounded-r-lg">
-                              <div className="font-medium text-sm text-gray-800 mb-2">
-                                {checkName}: <span className={`font-semibold ${check.status === 'pass' ? 'text-green-600' : check.status === 'partial' ? 'text-yellow-600' : 'text-red-600'}`}>{check.status}</span> ({check.score} pts)
-                              </div>
-                              {check.evidence.length > 0 && (
-                                <div className="bg-white p-3 rounded border-l-2 border-gray-300">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Evidence:</div>
-                                  <ul className="text-sm text-gray-700 space-y-1">
-                                    {check.evidence.map((evidence, idx) => (
-                                      <li key={idx} className="flex items-start">
-                                        <span className="text-gray-400 mr-2">•</span>
-                                        <span className="flex-1">{evidence}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
               )}
 
@@ -369,7 +331,24 @@ export default function Home() {
                     <div className="space-y-6">
                       <div className="bg-white border border-gray-200 rounded-lg p-6">
                         <h3 className="font-semibold text-gray-900 mb-4 text-lg">🤖 AI Content Strategy Analysis</h3>
-                        <div className="prose prose-sm max-w-none text-gray-700">
+                        <div className="prose prose-slate prose-lg max-w-none text-slate-800 leading-relaxed 
+                          prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:text-balance
+                          prose-h1:text-2xl prose-h1:mb-6 prose-h1:leading-tight
+                          prose-h2:text-xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:leading-tight prose-h2:text-slate-800
+                          prose-h3:text-lg prose-h3:mb-3 prose-h3:mt-6 prose-h3:text-slate-800
+                          prose-p:mb-4 prose-p:text-slate-700 prose-p:leading-7
+                          prose-ul:mb-4 prose-ul:text-slate-700 prose-ul:space-y-2
+                          prose-ol:mb-4 prose-ol:text-slate-700 prose-ol:space-y-2
+                          prose-li:leading-6 prose-li:text-slate-700
+                          prose-strong:text-slate-900 prose-strong:font-semibold
+                          prose-em:text-slate-700 prose-em:italic
+                          prose-blockquote:border-l-4 prose-blockquote:border-blue-200 prose-blockquote:bg-blue-50 prose-blockquote:text-slate-700 prose-blockquote:pl-4 prose-blockquote:py-2 prose-blockquote:rounded-r
+                          prose-code:text-xs prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:font-mono
+                          prose-pre:bg-slate-100 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto
+                          prose-a:text-blue-600 prose-a:font-medium prose-a:no-underline hover:prose-a:text-blue-700 hover:prose-a:underline
+                          prose-hr:border-slate-200 prose-hr:my-8
+                          prose-img:rounded-lg prose-img:shadow-sm
+                          [&>*:first-child]:mt-0 [&>*:last-child]:mb-6">
                           <ReactMarkdown>{aiInsights.markdownResponse}</ReactMarkdown>
                         </div>
                       </div>

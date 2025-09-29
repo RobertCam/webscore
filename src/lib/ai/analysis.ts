@@ -69,48 +69,64 @@ You are an expert AI content strategist analyzing a specific webpage for content
 Analyze this specific webpage and provide targeted content recommendations based on the actual page content, brand voice analysis, and current local/industry trends.
 
 ## CURRENT PAGE CONTENT:
-**URL:** ${url}
-**Title:** ${fullContent.title}
-**Meta Description:** ${fullContent.description}
-**Main H1:** ${fullContent.h1}
-**Subheadings (H2s):** ${fullContent.h2s.join(' | ')}
-**Main Content:** ${fullContent.allText}
+🔗 **URL:** ${url}
+📄 **Title:** ${fullContent.title}
+📝 **Meta Description:** ${fullContent.description}
+# **Main H1:** ${fullContent.h1}
+## **Subheadings (H2s):** ${fullContent.h2s.join(' | ')}
+📰 **Main Content:** ${fullContent.allText}
 
-**Brand Context:** ${brand || 'Unknown brand'}
-**Location:** ${locality || 'Unknown location'}
-**Current SEO Score:** ${scorecard.total_score}/100
+🏢 **Brand Context:** ${brand || 'Unknown brand'}
+📍 **Location:** ${locality || 'Unknown location'}
+⭐ **Current SEO Score:** ${scorecard.total_score}/100
 
-**Performance Issues:** ${weaknesses.join(', ') || 'No significant weaknesses detected'}
+⚠️ **Performance Issues:** ${weaknesses.join(', ') || 'No significant weaknesses detected'}
+
+---
 
 ## ANALYSIS REQUIREMENTS:
 
-1. **CONTENT AUDIT & IMPROVEMENT:**
-   - Analyze the actual page content quality, structure, and messaging
-   - Identify specific content gaps and weak areas
-   - Provide exact recommendations for improving the existing content
+### 1. 📊 **CONTENT AUDIT & IMPROVEMENT**
+- Analyze the actual page content quality, structure, and messaging for engaging storytelling, features, or community connection
+- Identify specific content gaps and weak areas
+- Provide exact recommendations for improving the existing content
 
-2. **BRAND VOICE RESEARCH & ALIGNMENT:**
-   - Use web search to gather brand voice examples from official sources
-   - Compare the current page's tone with brand's official communications
-   - Suggest specific wording changes to better match brand voice
+### 2. 🎨 **BRAND VOICE RESEARCH & ALIGNMENT**
+- Use web search to gather brand voice examples from official sources
+- Compare the current page's tone with brand's official communications  
+- Suggest specific wording changes to better match brand voice
 
-3. **LOCAL MARKET INTELLIGENCE:**
-   - Research current trends, events, and conversations in ${locality || 'this location'}
-   - Identify content opportunities based on local audience interests
-   - Suggest locally relevant content that competitors aren't covering
+### 3. 🌍 **LOCAL MARKET INTELLIGENCE**
+- Research current trends, events, and conversations in ${locality || 'this location'}
+- Identify content opportunities based on local audience interests
+- Suggest locally relevant content that competitors aren't covering
 
-4. **AI SEARCH OPTIMIZATION:**
-   - Based on the actual page content, suggest improvements for AI search visibility
-   - Recommend specific content additions that answer common queries
-   - Suggest schema markup improvements based on the page's content type
+### 4. 🔍 **AI SEARCH OPTIMIZATION**
+- Based on the actual page content, suggest improvements for AI search visibility
+- Recommend specific content additions that answer common queries
+- Suggest schema markup improvements based on the page's content type
 
-5. **CONTENT GENERATION RECOMMENDATIONS:**
-   - Provide specific content suggestions written in the brand's voice
-   - Include sample headlines, descriptions, or content snippets
-   - Suggest topics that align with both brand expertise and local search intent
+### 5. ✍️ **CONTENT GENERATION RECOMMENDATIONS**
+- Provide specific content suggestions written in the brand's voice
+- Include sample headlines, descriptions, or content snippets
+- Suggest topics that align with both brand expertise and local search intent
 
-## OUTPUT FORMAT:
-Provide specific, actionable recommendations with examples. Focus on improving THIS specific page rather than generic advice.`;
+---
+
+## OUTPUT FORMAT REQUIREMENTS:
+
+🎯 **IMPORTANT:** Your response will be displayed in a clean markdown format. Please:
+
+✅ **Use clear headers** with ## Section Name for major sections
+✅ **Use subheaders** with ### Subsection Name for important points  
+✅ **Use bullet points** with - dash for all recommendations
+✅ **Use bold** with **text** for key terms and recommendations
+✅ **Include examples** in quotes with "example text"
+✅ **Separate sections** with blank lines for better readability
+✅ **Keep paragraphs short** (2-3 sentences max)
+✅ **Use emojis sparingly** for visual interest
+
+Focus on improving THIS specific page rather than generic advice. Make your response visually appealing and easy to scan.`;
 
   try {
     console.log(`Making OpenAI request for URL: ${url}`);
