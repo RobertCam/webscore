@@ -555,45 +555,36 @@ async function runAllChecks(
 
   // N2: Authoritative Profiles
   const sameAsLinks = localBusiness?.sameAs || orgSchema?.sameAs || [];
-  const authoritativeDomains = ['linkedin.com', 'wikipedia.org', 'facebook.com', 'twitter.com', 'instagram.com'];
-  const hasAuthoritative = sameAsLinks.some((link: string) => 
-    authoritativeDomains.some(domain => link.includes(domain))
-  );
   
-  if (sameAsLinks.length >= 2 && hasAuthoritative) {
+  if (sameAsLinks.length >= 2) {
     results.push(createCheckResult('N2', 'pass', [
-      `Found ${sameAsLinks.length} sameAs links including authoritative profiles`,
+      `Found ${sameAsLinks.length} social profile links`,
       `Links: ${sameAsLinks.slice(0, 3).join(', ')}`
     ]));
-  } else if (sameAsLinks.length >= 1) {
+  } else if (sameAsLinks.length === 1) {
     results.push(createCheckResult('N2', 'partial', [
-      `Found ${sameAsLinks.length} sameAs links but no authoritative profiles`,
-      `Links: ${sameAsLinks.slice(0, 3).join(', ')}`
+      `Found ${sameAsLinks.length} social profile link`,
+      `Link: ${sameAsLinks[0]}`
     ]));
   } else {
     results.push(createCheckResult('N2', 'fail', [
-      'No sameAs links to authoritative profiles found'
+      'No social profile links found in schema'
     ]));
   }
 
   // N3: Logo Visibility
-  const logoInSchema = localBusiness?.logo || orgSchema?.logo;
   const logoVisible = parsed.images.some(img => 
     img.alt && img.alt.toLowerCase().includes('logo') ||
     img.src && img.src.toLowerCase().includes('logo')
   );
   
-  if (logoInSchema && logoVisible) {
+  if (logoVisible) {
     results.push(createCheckResult('N3', 'pass', [
-      'Logo found in both schema and visible on page'
-    ]));
-  } else if (logoInSchema || logoVisible) {
-    results.push(createCheckResult('N3', 'partial', [
-      logoInSchema ? 'Logo in schema but not visible' : 'Logo visible but not in schema'
+      'Logo visible on page'
     ]));
   } else {
     results.push(createCheckResult('N3', 'fail', [
-      'No logo found in schema or visible on page'
+      'No logo found visible on page'
     ]));
   }
 

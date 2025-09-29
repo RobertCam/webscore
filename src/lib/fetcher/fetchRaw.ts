@@ -51,7 +51,7 @@ export async function renderRemotely(url: string): Promise<RenderResponse> {
   }
 
   try {
-    const response = await fetch(`${endpoint}${encodeURIComponent(url)}`, {
+    const response = await fetch(`${endpoint}?url=${encodeURIComponent(url)}`, {
       method: 'GET',
       headers,
       cache: 'no-store',
@@ -67,7 +67,10 @@ export async function renderRemotely(url: string): Promise<RenderResponse> {
       throw new Error('Invalid response from render service');
     }
 
-    return data as RenderResponse;
+    return {
+      finalUrl: data.finalUrl,
+      html: data.html
+    } as RenderResponse;
   } catch (error) {
     throw new Error(`Failed to render ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
