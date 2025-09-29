@@ -190,7 +190,7 @@ export default function Home() {
               <p className="mt-2 text-xs text-gray-500">
                 {aiInsightsEnabled 
                   ? 'Get advanced content recommendations and brand voice analysis' 
-                  : 'Get standard SEO score analysis only'
+                  : 'Get standard SEO and AI search analysis only'
                 }
               </p>
             </div>
